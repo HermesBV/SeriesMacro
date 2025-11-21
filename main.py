@@ -314,7 +314,7 @@ def main():
                     with b_col1: st.download_button(label="Descargar Datos (Filtrados)", data=excel_filtered, file_name="series_filtradas.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
                     with b_col2: st.download_button(label="Descargar Datos (Completos)", data=excel_full, file_name="BD_completa.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
                 else: st.warning("Las series seleccionadas no contienen datos válidos.")
-            else: st.info("👆 Selecciona series abajo para comenzar.")
+            else: st.info("Selecciona alguna serie para comenzar.")
 
     st.markdown(f"""
         <style>
