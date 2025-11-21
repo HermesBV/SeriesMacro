@@ -114,26 +114,51 @@ def main():
     # --- CSS ---
     st.markdown(f"""
         <style>
-        .block-container {{ padding-top: 0.5rem; }}
+        /* --- OCULTAR ELEMENTOS NATIVOS DE STREAMLIT --- */
         
-        /* --- BARRA SUPERIOR --- */
+        /* Ocultar el Header superior (Menú hamburguesa, barra de estado, etc) */
+        header[data-testid="stHeader"] {{
+            visibility: hidden;
+            height: 0px;
+        }}
+        
+        /* Ocultar la decoración de colores superior */
+        div[data-testid="stDecoration"] {{
+            visibility: hidden;
+            height: 0px;
+        }}
+
+        /* Ocultar el toolbar de opciones si aparece */
+        div[data-testid="stToolbar"] {{
+            visibility: hidden;
+            height: 0px;
+        }}
+
+        /* --- AJUSTES DE ESPACIADO --- */
+        
+        /* Eliminar padding superior para que nuestra barra toque el techo */
+        .block-container {{
+            padding-top: 0rem !important;
+            padding-bottom: 5rem !important; /* Espacio para footer */
+            margin-top: 1rem !important; /* Pequeño margen para separar del borde físico del navegador */
+        }}
+        
+        /* --- BARRA SUPERIOR PERSONALIZADA --- */
         [data-testid="stHorizontalBlock"] {{
             background-color: {COLOR_FONDO_NEGRO};
             padding: 5px 10px;
             border-radius: 6px;
-            align-items: center !important; /* CENTRADO VERTICAL */
+            align-items: center !important; 
             min-height: 50px;
         }}
         
-        /* Forzar alineación vertical en las columnas */
         div[data-testid="column"] {{
             display: flex !important;
             flex-direction: row !important;
-            align-items: center !important; /* CLAVE PARA CENTRAR EN ALTURA */
+            align-items: center !important; 
             height: 100%;
         }}
 
-        /* Título personalizado */
         .custom-header-title {{
             font-family: 'Source Sans Pro', sans-serif;
             font-weight: 600;
@@ -141,14 +166,13 @@ def main():
             color: {COLOR_TEXTO_BLANCO} !important;
             margin: 0;
             padding-left: 10px;
-            line-height: 1; /* Evita espaciado extra arriba/abajo */
+            line-height: 1; 
         }}
         
-        /* Botón Daniel Heymann (Estilo Transparente con Borde) */
         div[data-testid="column"]:nth-of-type(3) button {{
-            background-color: {COLOR_FONDO_NEGRO} !important; /* Fondo igual al header */
+            background-color: {COLOR_FONDO_NEGRO} !important; 
             color: {COLOR_TEXTO_BLANCO} !important;
-            border: 1px solid {COLOR_TEXTO_BLANCO} !important; /* Borde visible */
+            border: 1px solid {COLOR_TEXTO_BLANCO} !important; 
             font-size: 13px !important;
             padding: 4px 12px !important;
             margin: 0 !important;
@@ -162,13 +186,12 @@ def main():
             color: {COLOR_FONDO_NEGRO} !important;
         }}
 
-        /* ESTILO PARA BOTONES DE DESCARGA (Hacerlos más compactos y evitar que ocupen 2 líneas) */
         .stDownloadButton button {{
             font-size: 14px !important;
-            padding: 0.4rem 0.8rem !important; /* Menos relleno */
+            padding: 0.4rem 0.8rem !important; 
             height: auto !important;
             min-height: 0px !important;
-            white-space: nowrap !important; /* Forzar una sola línea */
+            white-space: nowrap !important; 
         }}
         </style>
     """, unsafe_allow_html=True)
@@ -193,7 +216,6 @@ def main():
         st.markdown('<div class="custom-header-title">Series Económicas de Argentina</div>', unsafe_allow_html=True)
     
     with c_btn:
-        # Botón Toggle
         if st.button("Daniel Heymann", use_container_width=True):
             st.session_state['show_dh'] = not st.session_state['show_dh']
             st.rerun()
@@ -230,15 +252,12 @@ def main():
 
     selected_rows = edited_df[edited_df["Seleccionar"] == True]
     
-    # Lógica cambio de selección
     current_selection_ids = sorted(selected_rows['ID'].astype(str).tolist())
     current_selection_hash = ",".join(current_selection_ids)
     
     if current_selection_hash != st.session_state['last_selection_hash']:
-        # Si cambia selección, ocultamos DH y mostramos gráfico
         st.session_state['show_dh'] = False
         st.session_state['last_selection_hash'] = current_selection_hash
-        # No necesitamos rerun, el renderizado condicional de abajo lo maneja
 
     with chart_container:
         if st.session_state['show_dh']:
@@ -287,17 +306,15 @@ def main():
                     )
                     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True, 'toImageButtonOptions': {'format': 'png', 'filename': 'grafico_series', 'height': 600, 'width': 1000, 'scale': 2}, 'displaylogo': False})
                     
-                    # Botones de descarga
                     excel_filtered = convert_df_to_excel_filtered(selected_rows, all_data_sheets)
                     excel_full = get_full_excel_bytes()
                     
-                    # Aumentamos el espacio para botones (6, 2, 2) en vez de (8, 1.5, 1.5)
                     b_void, b_col1, b_col2 = st.columns([6, 2, 2], gap="small") 
                     
                     with b_col1: st.download_button(label="Descargar Datos (Filtrados)", data=excel_filtered, file_name="series_filtradas.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
                     with b_col2: st.download_button(label="Descargar Datos (Completos)", data=excel_full, file_name="BD_completa.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
                 else: st.warning("Las series seleccionadas no contienen datos válidos.")
-            else: st.info("Selecciona alguna serie para comenzar.")
+            else: st.info("👆 Selecciona series abajo para comenzar.")
 
     st.markdown(f"""
         <style>
