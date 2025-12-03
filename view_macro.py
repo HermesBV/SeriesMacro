@@ -15,7 +15,7 @@ def show(df_index, all_data_sheets):
         st.markdown("### Buscador General")
         col1, col3, col4 = st.columns([2, 1, 1])
         with col1: 
-            search_text = st.text_input("🔍 Buscar (Variable/Pestaña)", placeholder="ej. PBI...", key="s_text")
+            search_text = st.text_input("🔍 Buscar (Variable/Pestaña)", placeholder="ej. PIB...", key="s_text")
         with col3:
             temas = ["Todos"] + sorted(list(df_index['Tema'].unique()))
             tema_sel = st.selectbox("📂 Filtrar por Tema", temas, key="s_tema")
