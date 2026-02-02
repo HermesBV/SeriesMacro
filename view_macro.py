@@ -234,4 +234,4 @@ def show(df_index, all_data_sheets):
             with b_col4: 
                 st.download_button(label="Descargar Base (Completa)", data=excel_full, file_name="BD_completa.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
         else:
-            st.info("👆 Selecciona series en el buscador de abajo para graficar.")
+            st.info("⚠️ Selecciona series en el buscador de abajo para graficar ⚠️")
