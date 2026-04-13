@@ -44,7 +44,7 @@ def show(df_index, all_data_sheets):
             column_order=["Seleccionar", "Variable", "Tema", "Frecuencia", "Pestaña"], 
             disabled=["Variable", "Tema", "Frecuencia", "Pestaña", "ID"],
             hide_index=True, 
-            use_container_width=True, 
+            width="stretch", 
             height=300,
             key=stable_key
         )
@@ -105,6 +105,10 @@ def show(df_index, all_data_sheets):
                             if var_name in sheet_df.columns:
                                 serie = sheet_df[['Fecha', var_name]].set_index('Fecha').sort_index()
                                 serie.columns = [var_id]
+                                
+                                # --- CORRECCIÓN 1: Forzar valores numéricos (limpia textos y convierte a NaN) ---
+                                serie[var_id] = pd.to_numeric(serie[var_id], errors='coerce')
+                                
                                 plot_data_full = serie if plot_data_full.empty else plot_data_full.join(serie, how='outer')
                                 
                                 if is_visible:
@@ -113,11 +117,13 @@ def show(df_index, all_data_sheets):
                                     if chart_type == "Barras":
                                         fig.add_trace(go.Bar(x=serie.index, y=serie[var_id], name=var_name, marker_color=color_final, hovertemplate='%{y}<extra></extra>'), secondary_y=use_secondary)
                                     elif chart_type == "Área":
-                                        fig.add_trace(go.Scatter(x=serie.index, y=serie[var_id], name=var_name, fill='tozeroy', mode='lines', line=dict(color=color_final, width=2), hovertemplate='%{y}<extra></extra>'), secondary_y=use_secondary)
+                                        # --- CORRECCIÓN 2: connectgaps=True en Área ---
+                                        fig.add_trace(go.Scatter(x=serie.index, y=serie[var_id], name=var_name, fill='tozeroy', mode='lines', connectgaps=True, line=dict(color=color_final, width=2), hovertemplate='%{y}<extra></extra>'), secondary_y=use_secondary)
                                     elif chart_type == "Puntos":
                                         fig.add_trace(go.Scatter(x=serie.index, y=serie[var_id], name=var_name, mode='markers', marker=dict(color=color_final, size=6), hovertemplate='%{y}<extra></extra>'), secondary_y=use_secondary)
                                     else: 
-                                        fig.add_trace(go.Scatter(x=serie.index, y=serie[var_id], name=var_name, line=dict(color=color_final, width=2), mode='lines', hovertemplate='%{y}<extra></extra>'), secondary_y=use_secondary)
+                                        # --- CORRECCIÓN 3: connectgaps=True en Línea (default) ---
+                                        fig.add_trace(go.Scatter(x=serie.index, y=serie[var_id], name=var_name, line=dict(color=color_final, width=2), mode='lines', connectgaps=True, hovertemplate='%{y}<extra></extra>'), secondary_y=use_secondary)
                                 
                                 series_metadata.append({
                                     "id": var_id, "name": var_name, "color": color_final,
@@ -149,7 +155,7 @@ def show(df_index, all_data_sheets):
                     fig.update_yaxes(title_text="", secondary_y=False, showgrid=True, gridcolor="#333333")
                     fig.update_yaxes(title_text="", secondary_y=True, showgrid=False)
 
-                    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True, 'displaylogo': False})
+                    st.plotly_chart(fig, width="stretch", config={'displayModeBar': True, 'displaylogo': False})
             
             # --- LISTA LATERAL (CONTROLES) ---
             with c_legend:
@@ -196,10 +202,7 @@ def show(df_index, all_data_sheets):
                         if is_vis:
                             label_name = item['name']
                         else:
-                            # HACK para color grisáceo:
-                            # 1. Usamos \small para que ocupe menos espacio y no desborde.
-                            # 2. Usamos \textsf para fuente Sans-Serif (evita Times New Roman).
-                            # 3. Truncamos nombres muy largos porque LaTeX no hace wrap.
+                            # HACK para color grisáceo
                             safe_name = item['name'].replace("$", "").replace("{", "").replace("}", "").replace("_", " ")
                             if len(safe_name) > 28:
                                 safe_name = safe_name[:26] + ".."
@@ -212,14 +215,14 @@ def show(df_index, all_data_sheets):
                     
                     st.markdown("<div style='margin-bottom: 2px;'></div>", unsafe_allow_html=True)
 
-            # --- BOTONES DESCARGA (SIN ÍCONOS Y TEXTO CAMBIADO) ---
+            # --- BOTONES DESCARGA ---
             excel_filtered = utils.convert_df_to_excel_filtered(selected_rows_global, all_data_sheets)
             excel_full = utils.get_full_excel_bytes()
             
             b_col1, b_void, b_col3, b_col4 = st.columns([2, 4, 2, 2], gap="small") 
             
             with b_col1:
-                if st.button("🗑 Limpiar búsqueda", use_container_width=True):
+                if st.button("🗑 Limpiar búsqueda", width="stretch"):
                     st.session_state['selected_ids'] = set()
                     st.session_state['axes_config'] = {}
                     st.session_state['visibility_map'] = {}
@@ -230,8 +233,8 @@ def show(df_index, all_data_sheets):
                     st.rerun()
 
             with b_col3: 
-                st.download_button(label="Descargar Datos (Filtrados)", data=excel_filtered, file_name="series_seleccion.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                st.download_button(label="Descargar Datos (Filtrados)", data=excel_filtered, file_name="series_seleccion.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", width="stretch")
             with b_col4: 
-                st.download_button(label="Descargar Base (Completa)", data=excel_full, file_name="BD_completa.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                st.download_button(label="Descargar Base (Completa)", data=excel_full, file_name="BD_completa.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", width="stretch")
         else:
             st.info("⚠️ Selecciona series en el buscador de abajo para graficar ⚠️")

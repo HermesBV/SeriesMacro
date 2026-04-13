@@ -138,7 +138,7 @@ def main():
         st.markdown(f'<div class="custom-header-title">{title_text}</div>', unsafe_allow_html=True)
     
     with c_btn:
-        if st.button(btn_text, use_container_width=True):
+        if st.button(btn_text, width="stretch"):
             st.session_state['view'] = 'other' if st.session_state['view'] == 'macro' else 'macro'
             st.rerun()
 

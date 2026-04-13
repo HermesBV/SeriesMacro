@@ -75,7 +75,7 @@ def show(all_data_sheets):
             col_graph, col_buttons = st.columns([6, 1], gap="medium")
             
             with col_graph:
-                st.pyplot(fig, use_container_width=True)
+                st.pyplot(fig, width="stretch")
             
             with col_buttons:
                 # Espaciadores para bajar los botones y centrarlos verticalmente respecto al gráfico
@@ -94,7 +94,7 @@ def show(all_data_sheets):
                     data=buf.getvalue(),
                     file_name="camello_heymann.png",
                     mime="image/png",
-                    use_container_width=True
+                    width="stretch"
                 )
                 
                 st.write("") # Pequeño espacio entre botones
@@ -106,7 +106,7 @@ def show(all_data_sheets):
                     data=excel_single,
                     file_name="ITCRB_Heymann.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
+                    width="stretch"
                 )
         else:
             st.error("Error al procesar los datos para el gráfico.")
