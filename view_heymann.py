@@ -1,3 +1,4 @@
+# VIEW_HEYMANN_RESET_V14: botones de descarga compactos en una linea.
 import streamlit as st
 import pandas as pd
 import seaborn as sns
@@ -26,14 +27,13 @@ def plot_heymann_camel(df):
     last_date = last_row['Fecha']
     
     # Formato fecha (ej: Sep-25)
+    # Formato fecha (ej: Sep-25)
     last_date_str = last_date.strftime("%b-%y").capitalize()
 
-    # Estilo Matplotlib Oscuro
-    plt.style.use('dark_background')
+    # --- AJUSTADO PARA FONDO BLANCO ---
+    plt.style.use('default') 
     
-    # Ajustamos figsize para que sea más "panorámico" y entre en una pantalla (menos altura)
     fig, ax = plt.subplots(figsize=(12, 5.2)) 
-    
     fig.patch.set_facecolor('none')
     ax.set_facecolor('none')
 
@@ -41,19 +41,19 @@ def plot_heymann_camel(df):
     sns.kdeplot(df['Valor'], color='#4da6ff', fill=True, alpha=0.3, linewidth=2, ax=ax, label='Densidad')
 
     # Líneas de referencia
-    ax.axvline(mean_val, linestyle='--', color=utils.PALETA_NARANJAS[0], label=f'Promedio ({mean_val:.2f})')
-    ax.axvline(last_val, linestyle='--', color='#00ff00', label=f'{last_date_str} ({last_val:.2f})')
+    ax.axvline(mean_val, linestyle='--', color=utils.PALETA_COLORES[0], label=f'Promedio ({mean_val:.2f})')
+    ax.axvline(last_val, linestyle='--', color='#049c82', label=f'{last_date_str} ({last_val:.2f})')
 
-    # Textos (Actualizado con "Dic 2001=100")
-    ax.set_title('Estimación de Densidad Kernel para Tipo de Cambio Real Oficial Dic 2001=100', color='white', fontsize=14, pad=15)
-    ax.set_xlabel('Valor del Índice', color='white')
-    ax.set_ylabel('Densidad', color='white')
+    # Textos (Actualizado con colores oscuros)
+    ax.set_title('Estimación de Densidad Kernel para Tipo de Cambio Real Oficial Dic 2001=100', color='black', fontsize=14, pad=15)
+    ax.set_xlabel('Valor del Índice', color='black')
+    ax.set_ylabel('Densidad', color='black')
     
     # Ajustes visuales
-    ax.tick_params(colors='white')
+    ax.tick_params(colors='black')
     legend = ax.legend(frameon=False)
-    plt.setp(legend.get_texts(), color='white')
-    ax.grid(True, linestyle=':', alpha=0.3, color='gray')
+    plt.setp(legend.get_texts(), color='black')
+    ax.grid(True, linestyle=':', alpha=0.5, color='gray') # Grilla un poco más visible
     sns.despine(left=True, bottom=True)
     
     # Reducimos márgenes para maximizar espacio
@@ -64,6 +64,29 @@ def plot_heymann_camel(df):
 def show(all_data_sheets):
     """Función principal para renderizar la vista de Heymann"""
     # Sin título Markdown superior
+    st.markdown(
+        """
+        <style>
+        /* Heymann: botones de descarga angostos pero legibles en una linea. */
+        div[data-testid="stDownloadButton"] button {
+            padding-left: 0.22rem !important;
+            padding-right: 0.22rem !important;
+            min-height: 2.20rem !important;
+            white-space: nowrap !important;
+        }
+        div[data-testid="stDownloadButton"] button p,
+        div[data-testid="stDownloadButton"] button span,
+        div[data-testid="stDownloadButton"] button div {
+            font-size: 0.66rem !important;
+            line-height: 1.05 !important;
+            white-space: nowrap !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
     
     if utils.SHEET_HEYMANN in all_data_sheets:
         df_heymann = all_data_sheets[utils.SHEET_HEYMANN]
@@ -72,7 +95,7 @@ def show(all_data_sheets):
         
         if fig:
             # Layout: 6 partes gráfico, 1 parte botones (para que sean angostos)
-            col_graph, col_buttons = st.columns([6, 1], gap="medium")
+            col_graph, col_buttons = st.columns([6, 1.18], gap="medium")
             
             with col_graph:
                 st.pyplot(fig, width="stretch")

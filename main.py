@@ -3,160 +3,198 @@ import locale
 from PIL import Image
 import os
 
-# Importamos nuestros nuevos módulos
 import utils
 import view_macro
 import view_heymann
 
-# Configuración Locale
 try:
     locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
 except:
-    try:
-        locale.setlocale(locale.LC_TIME, 'es_ES')
-    except:
-        pass
+    try: locale.setlocale(locale.LC_TIME, 'es_ES')
+    except: pass
 
-# --- CONFIGURACIÓN DE PÁGINA ---
 page_icon = None
 if os.path.exists(utils.LOGO_PATH):
     try:
         img = Image.open(utils.LOGO_PATH).convert("RGBA")
         background = Image.new("RGBA", img.size, (255, 255, 255, 255))
         page_icon = Image.alpha_composite(background, img)
-    except:
-        pass
+    except: pass
 
-st.set_page_config(
-    layout="wide", 
-    page_title="Series Macro IIEP",
-    page_icon=page_icon
-)
+st.set_page_config(layout="wide", page_title="Series Macro IIEP", page_icon=page_icon)
 
-# --- MAIN ---
 def main():
-    if 'view' not in st.session_state:
-        st.session_state['view'] = 'macro'
-    
-    # --- ESTADO PERSISTENTE ---
+    if 'view' not in st.session_state: st.session_state['view'] = 'macro'
     if 'selected_ids' not in st.session_state: st.session_state['selected_ids'] = set()
     for key in ['axes_config', 'visibility_map', 'color_map', 'chart_type_map']:
         if key not in st.session_state: st.session_state[key] = {}
 
     logo_b64 = utils.get_base64_image(utils.LOGO_PATH)
 
-    # --- CSS GLOBAL ---
+    # --- CSS GLOBAL ACTUALIZADO ---
     st.markdown(f"""
         <style>
-        header[data-testid="stHeader"] {{ visibility: hidden; height: 0px; }}
-        div[data-testid="stDecoration"] {{ visibility: hidden; height: 0px; }}
-        div[data-testid="stToolbar"] {{ visibility: hidden; height: 0px; }}
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+        
+        * {{ font-family: 'Poppins', sans-serif !important; }}
 
+        header[data-testid="stHeader"], div[data-testid="stDecoration"], div[data-testid="stToolbar"] {{ 
+            visibility: hidden; height: 0px; 
+        }}
+
+        /* Fondo general Gris de la página */
+        .stApp {{ background-color: {utils.COLOR_FONDO_PAGINA}; }}
+        
         .block-container {{
             padding-top: 0rem !important;
-            padding-bottom: 5rem !important;
+            padding-bottom: 1.5rem !important;
             margin-top: 1rem !important;
-            background-color: {utils.COLOR_FONDO_PAGINA};
+            background-color: transparent; 
         }}
         
-        [data-testid="stHorizontalBlock"] {{
-            background-color: {utils.COLOR_FONDO_PAGINA};
-            padding: 5px 10px;
-            align-items: center !important; 
-            min-height: 60px;
+        /* Banner Superior Blanco */
+        [data-testid="stHorizontalBlock"]:first-of-type {{
+            background-color: {utils.COLOR_BANNER_SUPERIOR} !important;
+            padding: 10px 20px;
+            border-radius: 0px;
+            margin-top: -4rem;
+            padding-top: 3rem;
+            margin-bottom: 1.35rem;
         }}
         
         .custom-header-title {{
-            font-family: 'Source Sans Pro', sans-serif;
-            font-weight: 700;
-            font-size: 38px !important; 
-            color: {utils.COLOR_TEXTO_PRINCIPAL} !important;
-            margin: 0;
-            padding-left: 15px;
-            line-height: 1.1; 
+            font-weight: 700; font-size: 38px !important; color: {utils.COLOR_TEXTO_PRINCIPAL} !important;
+            margin: 0; padding-left: 15px; line-height: 1.1; 
         }}
         
-        .logo-container {{
-            background-color: {utils.COLOR_FONDO_LOGO}; 
-            border-radius: 6px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            height: 80px;
-            width: 100%;
-            padding: 5px;
+        /* Buscadores: Fondo blanco, texto negro, placeholder gris */
+        div[data-baseweb="input"] > div {{
+            background-color: #FFFFFF !important; border: 1px solid #545454 !important;
+        }}
+        div[data-baseweb="input"] input {{
+            color: #000000 !important;
+        }}
+        div[data-baseweb="input"] input::placeholder {{
+            color: #545454 !important;
         }}
         
-        div[data-baseweb="input"] {{
-            background-color: #333333 !important; color: white !important; border-color: #555 !important;
+        /* Selectbox buscadores */
+        div[data-baseweb="select"] > div {{
+            background-color: #FFFFFF !important; color: #000000 !important; border: 1px solid #545454 !important;
         }}
         
-        div[data-testid="column"] button {{
-           min-height: 35px; border: none; padding: 0px 5px;
+        /* Botones Verdes por defecto */
+        div.stButton > button,
+        div.stDownloadButton > button {{
+            background-color: {utils.COLOR_SLIDER_BORDE} !important;
+            color: #FFFFFF !important;
+            border: none !important;
+        }}
+        div.stButton > button:hover,
+        div.stDownloadButton > button:hover {{
+            background-color: #037a66 !important;
+            color: #FFFFFF !important;
+            border: none !important;
+        }}
+        div.stButton > button p,
+        div.stDownloadButton > button p {{
+            color: #FFFFFF !important;
         }}
 
-        /* REGLA ESPECÍFICA PARA EL BOTÓN DEL ENCABEZADO (DANIEL HEYMANN / SERIES MACRO) */
-        /* Apuntamos al tercer botón del primer bloque horizontal visible para hacerlo más grande */
+        /* Hacking visual para DataFrames de Streamlit (Forzar fondo blanco y texto negro) */
+        [data-testid="stDataFrame"], div[data-testid="stDataEditor"] {{
+            background-color: #FFFFFF !important;
+        }}
+        /* Nota: Para que el interior de la tabla sea completamente claro, es recomendable asegurar que el Theme 
+           en Configuración de Streamlit esté en 'Light', ya que Glide Data Grid usa un Canvas HTML. */
+
+        /* REGLA ESPECÍFICA BOTÓN DEL ENCABEZADO */
         div[data-testid="stHorizontalBlock"]:nth-of-type(1) div[data-testid="column"]:nth-of-type(3) button p {{
-            font-size: 1.6rem !important; /* Aumentado ~60% */
-            font-weight: 600 !important;
+            font-size: 1.6rem !important; font-weight: 600 !important;
         }}
         
         div[data-baseweb="popover"], div[data-testid="stColorPicker"] {{ padding: 0px; }}
-        
-        div[data-testid="stColorPicker"] > div {{
-            padding: 0px; display: flex; align-items: center; justify-content: center;
-        }}
-        
-        div[data-testid="stSelectbox"] > div > div {{
-            min-height: 30px; padding-top: 0px; padding-bottom: 0px;
-            background-color: transparent; border: 1px solid #444;
-        }}
+        div[data-testid="stColorPicker"] > div {{ padding: 0px; display: flex; align-items: center; justify-content: center; }}
 
-        .footer {{ position: fixed; left: 0; bottom: 0; width: 100%; background-color: {utils.COLOR_FONDO_PAGINA}; color: #888; text-align: center; padding: 5px; font-size: 0.8rem; border-top: 1px solid #333; z-index: 999; }}
+        .logo-link {{
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            padding: 3px 5px;
+            transition: background-color 0.18s ease, transform 0.18s ease, opacity 0.18s ease;
+        }}
+        .logo-link:hover {{
+            background-color: rgba(4, 156, 130, 0.08);
+            transform: translateY(-1px);
+            opacity: 0.92;
+        }}
+        .logo-link img {{
+            display: block;
+            max-height: 70px;
+            width: auto;
+        }}
+        
+        /* Footer al final de la pagina */
+        .footer {{ 
+            position: relative;
+            width: 100%;
+            box-sizing: border-box;
+            background-color: #FFFFFF;
+            color: #555555;
+            text-align: center; 
+            padding: 10px;
+            margin-top: 2rem;
+            font-size: 0.85rem;
+            border: 1px solid #E0E0E0;
+            border-radius: 2px;
+        }}
+        .footer a {{
+            color: {utils.COLOR_SLIDER_BORDE} !important;
+            font-weight: 600;
+            text-decoration: none;
+        }}
+        .footer a:hover {{ text-decoration: underline; }}
         </style>
     """, unsafe_allow_html=True)
 
-    # --- HEADER DINÁMICO ---
     if st.session_state['view'] == 'macro':
         title_text = "Series Macro IIEP"
         btn_text = "Daniel Heymann"
     else:
-        title_text = "🐫" # Título actualizado con emoji
+        title_text = "🐫" 
         btn_text = "Series Macro"
     
-    try:
-        c_logo, c_title, c_btn = st.columns([1.2, 7.8, 1.5], gap="medium", vertical_alignment="center")
-    except TypeError:
-        c_logo, c_title, c_btn = st.columns([1.2, 7.8, 1.5], gap="medium")
+    try: c_logo, c_title, c_btn = st.columns([1.2, 7.8, 1.5], gap="medium", vertical_alignment="center")
+    except TypeError: c_logo, c_title, c_btn = st.columns([1.2, 7.8, 1.5], gap="medium")
 
     with c_logo:
         if logo_b64:
-            st.markdown(f"""<div class="logo-container"><img src="data:image/png;base64,{logo_b64}" style="max-height: 70px; width: auto;"></div>""", unsafe_allow_html=True)
+            st.markdown(
+                f"""
+                <div class="logo-container" style="display: flex; align-items: center; justify-content: center;">
+                    <a class="logo-link" href="https://www.economicas.uba.ar/iiep/macro/" target="_blank" rel="noopener noreferrer" title="Ir a Macro IIEP">
+                        <img src="data:image/png;base64,{logo_b64}" alt="Macro IIEP">
+                    </a>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-    with c_title:
-        st.markdown(f'<div class="custom-header-title">{title_text}</div>', unsafe_allow_html=True)
-    
+    with c_title: st.markdown(f'<div class="custom-header-title">{title_text}</div>', unsafe_allow_html=True)
     with c_btn:
         if st.button(btn_text, width="stretch"):
             st.session_state['view'] = 'other' if st.session_state['view'] == 'macro' else 'macro'
             st.rerun()
 
-    st.markdown("---") 
-
-    # --- CARGA DE DATOS CENTRALIZADA ---
-    # Cargamos los datos una vez aquí y los pasamos a las vistas
     df_index = utils.load_metadata()
     if df_index is None: return
     all_data_sheets = utils.load_all_data()
 
-    # --- ENRUTAMIENTO DE VISTAS ---
-    if st.session_state['view'] == 'other':
-        view_heymann.show(all_data_sheets)
-    else:
-        view_macro.show(df_index, all_data_sheets)
+    if st.session_state['view'] == 'other': view_heymann.show(all_data_sheets)
+    else: view_macro.show(df_index, all_data_sheets)
 
-    st.markdown(f"""<div class="footer"><a href="https://github.com/HermesBV" target="_blank">Salieris de Heymann (2025) GitHub/HermesBV</a></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div class="footer">Salieris de Heymann (2025) - <a href="https://github.com/HermesBV" target="_blank">GitHub/HermesBV</a></div>""", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()

@@ -10,20 +10,18 @@ LOGO_PATH = 'estetica/logo-iiep-macro.png'
 ID_HEYMANN = "ITCRB_USA_M"
 SHEET_HEYMANN = "ITCRB M"
 
-# --- CONFIGURACIÓN DE COLORES ---
-COLOR_FONDO_PAGINA = "#000000"
-COLOR_TEXTO_PRINCIPAL = "#FFFFFF"
-COLOR_FONDO_LOGO = "#F0F0F0" 
-COLOR_BOTONES_ACTIVO = "#FF6B35"
-COLOR_SLIDER_BORDE = "#FF6B35"
-COLOR_BOTONES_RANGO_FONDO = "#444444"
-COLOR_BOTONES_RANGO_TEXTO = "#FFFFFF"
+# --- CONFIGURACIÓN DE COLORES (NUEVA PALETA) ---
+COLOR_FONDO_PAGINA = "#FFFFFF"     
+COLOR_BANNER_SUPERIOR = "#FFFFFF"  
+COLOR_TEXTO_PRINCIPAL = "#000000"  
+COLOR_BOTONES_ACTIVO = "#f05f30"   
+COLOR_SLIDER_BORDE = "#049c82"     
+COLOR_BOTONES_RANGO_FONDO = "#FFFFFF"
+COLOR_BOTONES_RANGO_TEXTO = "#000000"
 
-# Paleta Inicial
-PALETA_NARANJAS = [
-    "#FF6B35", "#F7C59F", "#EF233C", "#D90429", 
-    "#FF9F1C", "#FFBF69", "#CB997E", "#DDbea9",
-    "#3D5A80", "#98C1D9"
+# Paleta Principal: Naranja, Verde, Azul, Rojo, Amarillo
+PALETA_COLORES = [
+    "#f05f30", "#049c82", "#3774AC", "#bc2f29", "#d5cd65"
 ]
 
 # --- FUNCIONES DE CARGA DE DATOS ---
@@ -52,9 +50,7 @@ def get_full_excel_bytes():
 
 # --- FUNCIONES DE FILTRADO Y EXPORTACIÓN ---
 def filter_data(df, search_text, tema_filter, freq_filter):
-    # Exclusión de la serie Heymann del buscador general
     dff = df[df['ID'] != ID_HEYMANN].copy()
-    
     if search_text:
         mask = (
             dff['Variable'].astype(str).str.contains(search_text, case=False, na=False) | 
