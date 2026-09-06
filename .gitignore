@@ -1,2 +1,3 @@
 __pycache__/
-*.pycgit restore __pycache__/
+*.pyc
+bds/BD.backup-*.xlsx

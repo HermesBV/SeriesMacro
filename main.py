@@ -2,7 +2,6 @@ import streamlit as st
 import locale
 from PIL import Image
 import os
-
 import utils
 import view_macro
 import view_heymann
@@ -158,6 +157,14 @@ def main():
         </style>
     """, unsafe_allow_html=True)
 
+    df_index = utils.load_metadata()
+    if df_index is None:
+        return
+    sheet_names = utils.load_sheet_names()
+    has_heymann_data = utils.SHEET_HEYMANN in sheet_names
+    if st.session_state['view'] == 'other' and not has_heymann_data:
+        st.session_state['view'] = 'macro'
+
     if st.session_state['view'] == 'macro':
         title_text = "Series Macro IIEP"
         btn_text = "Daniel Heymann"
@@ -183,16 +190,14 @@ def main():
 
     with c_title: st.markdown(f'<div class="custom-header-title">{title_text}</div>', unsafe_allow_html=True)
     with c_btn:
-        if st.button(btn_text, width="stretch"):
+        if has_heymann_data and st.button(btn_text, width="stretch"):
             st.session_state['view'] = 'other' if st.session_state['view'] == 'macro' else 'macro'
             st.rerun()
 
-    df_index = utils.load_metadata()
-    if df_index is None: return
-    all_data_sheets = utils.load_all_data()
-
-    if st.session_state['view'] == 'other': view_heymann.show(all_data_sheets)
-    else: view_macro.show(df_index, all_data_sheets)
+    if st.session_state['view'] == 'other':
+        view_heymann.show(utils.load_data_sheets((utils.SHEET_HEYMANN,)))
+    else:
+        view_macro.show(df_index)
 
     st.markdown(f"""<div class="footer">Salieris de Heymann (2025) - <a href="https://github.com/HermesBV" target="_blank">GitHub/HermesBV</a></div>""", unsafe_allow_html=True)
 

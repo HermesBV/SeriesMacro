@@ -8,7 +8,7 @@ import utils
 
 EJE_IZQUIERDO = "Izquierdo"
 EJE_DERECHO = "Derecho"
-TIPOS_GRAFICO = ["Línea", "Barras", "Área", "Puntos"]
+TIPOS_GRAFICO = ["Línea", "Área", "Puntos"]
 HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 
@@ -17,7 +17,6 @@ def _normalizar_tipo(tipo):
     mapa = {
         "Linea": "Línea",
         "Línea": "Línea",
-        "Barras": "Barras",
         "Area": "Área",
         "Área": "Área",
         "Puntos": "Puntos",
@@ -380,8 +379,8 @@ def _render_buscador(df_index):
         column_config={
             "Seleccionar": st.column_config.CheckboxColumn("Seleccionar", default=False),
         },
-        column_order=["Seleccionar", "Variable", "Tema", "Frecuencia", "Pestaña"],
-        disabled=["Variable", "Tema", "Frecuencia", "Pestaña", "ID"],
+        column_order=["Seleccionar", "Nombre serie", "Unidades", "Tema", "Frecuencia"],
+        disabled=["Nombre serie", "Unidades", "Tema", "Frecuencia", "ID"],
         hide_index=True,
         width="stretch",
         height=300,
@@ -422,11 +421,12 @@ def _construir_items_series(selected_rows_global, all_data_sheets):
         chart_type = _normalizar_tipo(st.session_state["chart_type_map"][var_id])
 
         tab_name = row["Pestaña"]
-        var_name = row["Variable"]
+        var_name = row["Nombre serie"]
+        column_name = row["Columna BD"]
         if tab_name not in all_data_sheets:
             continue
 
-        serie = _preparar_serie(all_data_sheets[tab_name], var_name, var_id)
+        serie = _preparar_serie(all_data_sheets[tab_name], column_name, var_id)
         if serie.empty:
             continue
 
@@ -448,15 +448,6 @@ def _construir_items_series(selected_rows_global, all_data_sheets):
 def _render_grafico(items):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     plot_data_full = pd.DataFrame()
-    barras_izq = []
-    barras_der = []
-
-    visible_bar_items = [item for item in items if item["visible"] and item["type"] == "Barras"]
-    bar_counts = {
-        EJE_IZQUIERDO: sum(1 for item in visible_bar_items if item["axis"] == EJE_IZQUIERDO),
-        EJE_DERECHO: sum(1 for item in visible_bar_items if item["axis"] == EJE_DERECHO),
-    }
-    bar_positions = {EJE_IZQUIERDO: 0, EJE_DERECHO: 0}
 
     for item in items:
         var_id = item["id"]
@@ -471,24 +462,7 @@ def _render_grafico(items):
         if not item["visible"]:
             continue
 
-        if chart_type == "Barras":
-            eje = EJE_DERECHO if use_secondary else EJE_IZQUIERDO
-            valores_barra = _agregar_barras_con_shapes(
-                fig,
-                serie,
-                var_id,
-                var_name,
-                color,
-                use_secondary,
-                bar_positions[eje],
-                bar_counts[eje],
-            )
-            bar_positions[eje] += 1
-            if use_secondary:
-                barras_der.extend(valores_barra)
-            else:
-                barras_izq.extend(valores_barra)
-        elif chart_type == "Área":
+        if chart_type == "Área":
             fig.add_trace(
                 go.Scatter(
                     x=serie.index,
@@ -577,19 +551,14 @@ def _render_grafico(items):
     fig.update_yaxes(title_text="", secondary_y=False, showgrid=True, gridcolor="#EAEAEA")
     fig.update_yaxes(title_text="", secondary_y=True, showgrid=False)
 
-    rango_izq = _rango_con_cero(barras_izq)
-    rango_der = _rango_con_cero(barras_der)
-    if rango_izq is not None:
-        fig.update_yaxes(range=rango_izq, secondary_y=False)
-    if rango_der is not None:
-        fig.update_yaxes(range=rango_der, secondary_y=True)
-
     st.plotly_chart(fig, width="stretch", config={"displayModeBar": True, "displaylogo": False})
 
 
-def show(df_index, all_data_sheets):
+def show(df_index):
     """Vista Macro. Orden real: grafico, grilla de series, botones y buscador."""
     selected_rows_global = df_index[df_index["ID"].isin(st.session_state["selected_ids"])].copy()
+    selected_sheets = tuple(selected_rows_global["Pestaña"].dropna().astype(str).unique())
+    all_data_sheets = utils.load_data_sheets(selected_sheets)
 
     if selected_rows_global.empty:
         st.info("Selecciona series en el buscador de abajo para graficar")

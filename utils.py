@@ -25,6 +25,43 @@ PALETA_COLORES = [
 ]
 
 # --- FUNCIONES DE CARGA DE DATOS ---
+CODED_METADATA_COLUMNS = {
+    'ID', 'Código fuente', 'ID origen', 'Nombre serie', 'Variable', 'Unidades', 'Descripción',
+    'Frecuencia', 'Pestaña BD', 'Columna BD', 'Origen', 'Tema dataset', 'Estado', 'Fuente',
+}
+
+
+def _load_coded_metadata(excel_file):
+    """Carga el inventario plano generado por SeriesScraper."""
+    if 'Codificacion' not in excel_file.sheet_names:
+        return None
+
+    df = pd.read_excel(excel_file, sheet_name='Codificacion')
+
+    if not CODED_METADATA_COLUMNS.issubset(df.columns):
+        return None
+
+    frequency_names = {
+        'A': 'Anual', 'S': 'Semestral', 'T': 'Trimestral',
+        'M': 'Mensual', 'D': 'Diaria', 'I': 'Irregular',
+    }
+    df['Tema'] = df['Tema dataset'].fillna(df['Origen']).fillna('Sin clasificar')
+    df['Frecuencia código'] = df['Frecuencia'].astype(str).str.strip()
+    df['Frecuencia'] = df['Frecuencia código'].map(frequency_names).fillna(df['Frecuencia código'])
+    df = df.rename(columns={'Pestaña BD': 'Pestaña'})
+    return df
+
+
+def _only_chartable_series(df, excel_file):
+    """Separa series numéricas de entradas documentales como Comunicaciones BCRA."""
+    sheet_names = set(excel_file.sheet_names)
+    return df[
+        df['Pestaña'].isin(sheet_names)
+        & df['Columna BD'].notna()
+        & df['Columna BD'].astype(str).str.strip().ne('')
+    ].copy()
+
+
 def get_base64_image(image_path):
     if os.path.exists(image_path):
         with open(image_path, "rb") as img_file:
@@ -36,13 +73,28 @@ def load_metadata():
     if not os.path.exists(FILE_PATH):
         st.error(f"No se encontró el archivo en {FILE_PATH}.")
         return None
-    df = pd.read_excel(FILE_PATH, sheet_name=0)
-    df['ID'] = df['ID'].astype(str)
+    with pd.ExcelFile(FILE_PATH) as excel_file:
+        df = _load_coded_metadata(excel_file)
+        if df is None:
+            raise ValueError(
+                "El Excel no contiene la hoja 'Codificacion' con el esquema esperado."
+            )
+        df = _only_chartable_series(df, excel_file)
+    df['ID'] = df['ID'].astype(str).str.strip()
+    if df['ID'].eq('').any() or df['ID'].duplicated().any():
+        raise ValueError("La hoja de codificación contiene IDs vacíos o duplicados.")
     return df
 
 @st.cache_data
-def load_all_data():
-    return pd.read_excel(FILE_PATH, sheet_name=None)
+def load_sheet_names():
+    with pd.ExcelFile(FILE_PATH) as excel_file:
+        return tuple(excel_file.sheet_names)
+
+
+@st.cache_data
+def load_data_sheets(sheet_names):
+    names = [name for name in dict.fromkeys(sheet_names) if name]
+    return pd.read_excel(FILE_PATH, sheet_name=names) if names else {}
 
 def get_full_excel_bytes():
     with open(FILE_PATH, "rb") as f:
@@ -53,7 +105,8 @@ def filter_data(df, search_text, tema_filter, freq_filter):
     dff = df[df['ID'] != ID_HEYMANN].copy()
     if search_text:
         mask = (
-            dff['Variable'].astype(str).str.contains(search_text, case=False, na=False) | 
+            dff['Nombre serie'].astype(str).str.contains(search_text, case=False, na=False) |
+            dff['Variable'].astype(str).str.contains(search_text, case=False, na=False) |
             dff['Pestaña'].astype(str).str.contains(search_text, case=False, na=False)
         )
         dff = dff[mask]
@@ -76,7 +129,7 @@ def convert_df_to_excel_filtered(metadata_selected, data_dict):
                     full_df.rename(columns={full_df.columns[0]: 'Fecha'}, inplace=True)
                 if 'Fecha' in full_df.columns:
                      full_df['Fecha'] = pd.to_datetime(full_df['Fecha'], errors='coerce')
-                vars_to_keep = ['Fecha'] + [v for v in group['Variable'] if v in full_df.columns]
+                vars_to_keep = ['Fecha'] + [v for v in group['Columna BD'] if v in full_df.columns]
                 filtered_tab_df = full_df[vars_to_keep].copy()
                 filtered_tab_df.to_excel(writer, sheet_name=tab_name, index=False)
     return output.getvalue()
