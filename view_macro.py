@@ -383,14 +383,14 @@ def _render_buscador(df_index):
         column_config={
             "Seleccionar": st.column_config.CheckboxColumn("Seleccionar", default=False),
             "Nombre serie": st.column_config.TextColumn("Título"),
-            "Descripción": st.column_config.TextColumn("Detalle"),
+            "Detalle": st.column_config.TextColumn("Detalle"),
         },
         column_order=[
-            "Seleccionar", "Nombre serie", "Descripción", "Unidades",
+            "Seleccionar", "Nombre serie", "Detalle", "Unidades",
             "Valoración", "Tema", "Frecuencia",
         ],
         disabled=[
-            "Nombre serie", "Descripción", "Unidades", "Valoración",
+            "Nombre serie", "Detalle", "Unidades", "Valoración",
             "Tema", "Frecuencia", "ID",
         ],
         hide_index=True,

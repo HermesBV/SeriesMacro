@@ -49,6 +49,19 @@ def _load_coded_metadata(excel_file):
     df['Frecuencia código'] = df['Frecuencia'].astype(str).str.strip()
     df['Frecuencia'] = df['Frecuencia código'].map(frequency_names).fillna(df['Frecuencia código'])
     df = df.rename(columns={'Pestaña BD': 'Pestaña'})
+    df['Detalle'] = df['Descripción'].fillna('').astype(str).str.strip()
+
+    # Algunos catálogos publican dos series con exactamente los mismos metadatos
+    # visibles. En esos casos el ID nativo es la única diferencia verificable.
+    visible_columns = [
+        'Nombre serie', 'Detalle', 'Unidades', 'Valoración', 'Tema', 'Frecuencia',
+    ]
+    visual_key = df[visible_columns].fillna('').astype(str).apply(
+        lambda column: column.str.replace(r'\s+', ' ', regex=True).str.strip().str.casefold()
+    )
+    ambiguous = visual_key.duplicated(keep=False)
+    suffix = ' · ID: ' + df['ID origen'].astype(str).str.strip()
+    df.loc[ambiguous, 'Detalle'] = df.loc[ambiguous, 'Detalle'] + suffix.loc[ambiguous]
     return df
 
 
@@ -107,7 +120,7 @@ def filter_data(df, search_text, tema_filter, freq_filter):
         mask = (
             dff['Nombre serie'].astype(str).str.contains(search_text, case=False, na=False) |
             dff['Variable'].astype(str).str.contains(search_text, case=False, na=False) |
-            dff['Descripción'].astype(str).str.contains(search_text, case=False, na=False) |
+            dff['Detalle'].astype(str).str.contains(search_text, case=False, na=False) |
             dff['Pestaña'].astype(str).str.contains(search_text, case=False, na=False)
         )
         dff = dff[mask]
