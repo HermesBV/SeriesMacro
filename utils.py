@@ -26,7 +26,7 @@ PALETA_COLORES = [
 
 # --- FUNCIONES DE CARGA DE DATOS ---
 CODED_METADATA_COLUMNS = {
-    'ID', 'Código fuente', 'ID origen', 'Nombre serie', 'Variable', 'Unidades', 'Descripción',
+    'ID', 'Código fuente', 'ID origen', 'Nombre serie', 'Variable', 'Unidades', 'Valoración', 'Descripción',
     'Frecuencia', 'Pestaña BD', 'Columna BD', 'Origen', 'Tema dataset', 'Estado', 'Fuente',
 }
 
@@ -107,6 +107,7 @@ def filter_data(df, search_text, tema_filter, freq_filter):
         mask = (
             dff['Nombre serie'].astype(str).str.contains(search_text, case=False, na=False) |
             dff['Variable'].astype(str).str.contains(search_text, case=False, na=False) |
+            dff['Descripción'].astype(str).str.contains(search_text, case=False, na=False) |
             dff['Pestaña'].astype(str).str.contains(search_text, case=False, na=False)
         )
         dff = dff[mask]

@@ -358,7 +358,7 @@ def _render_buscador(df_index):
     col1, col3, col4 = st.columns([2, 1, 1])
 
     with col1:
-        search_text = st.text_input("Buscar (Variable/Pestaña)", placeholder="ej. PIB...", key="s_text")
+        search_text = st.text_input("Buscar", placeholder="ej. PIB, Argentina...", key="s_text")
     with col3:
         temas = ["Todos"] + sorted(list(df_index["Tema"].unique()))
         tema_sel = st.selectbox("Filtrar por Tema", temas, key="s_tema")
@@ -367,6 +367,10 @@ def _render_buscador(df_index):
         freq_sel = st.selectbox("Filtrar por Frecuencia", freqs, key="s_freq")
 
     df_filtered_view = utils.filter_data(df_index, search_text, tema_sel, freq_sel)
+    st.caption(
+        f"Cantidad de series: {len(df_filtered_view):,} de {len(df_index):,}"
+        .replace(",", ".")
+    )
     df_filtered_view["Seleccionar"] = df_filtered_view["ID"].isin(st.session_state["selected_ids"])
     df_filtered_view["Fuente_Label"] = df_filtered_view["Fuente"].apply(
         lambda x: "MECON" if str(x).startswith("https://www.economia.gob.ar") else x
@@ -378,9 +382,17 @@ def _render_buscador(df_index):
         df_filtered_view,
         column_config={
             "Seleccionar": st.column_config.CheckboxColumn("Seleccionar", default=False),
+            "Nombre serie": st.column_config.TextColumn("Título"),
+            "Descripción": st.column_config.TextColumn("Detalle"),
         },
-        column_order=["Seleccionar", "Nombre serie", "Unidades", "Tema", "Frecuencia"],
-        disabled=["Nombre serie", "Unidades", "Tema", "Frecuencia", "ID"],
+        column_order=[
+            "Seleccionar", "Nombre serie", "Descripción", "Unidades",
+            "Valoración", "Tema", "Frecuencia",
+        ],
+        disabled=[
+            "Nombre serie", "Descripción", "Unidades", "Valoración",
+            "Tema", "Frecuencia", "ID",
+        ],
         hide_index=True,
         width="stretch",
         height=300,
