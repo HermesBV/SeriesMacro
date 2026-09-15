@@ -83,8 +83,15 @@ def get_base64_image(image_path):
             return base64.b64encode(img_file.read()).decode()
     return ""
 
+
+def _database_version():
+    """Devuelve una huella barata que cambia cuando se reemplaza la base."""
+    stat = os.stat(FILE_PATH)
+    return stat.st_mtime_ns, stat.st_size
+
+
 @st.cache_data
-def load_metadata():
+def _load_metadata(database_version):
     if not os.path.exists(FILE_PATH):
         st.error(f"No se encontró el archivo en {FILE_PATH}.")
         return None
@@ -100,20 +107,33 @@ def load_metadata():
         raise ValueError("La hoja de codificación contiene claves de fuente e ID vacías o duplicadas.")
     return df
 
+
+def load_metadata():
+    return _load_metadata(_database_version())
+
+
 @st.cache_data
-def load_sheet_names():
+def _load_sheet_names(database_version):
     with pd.ExcelFile(FILE_PATH) as excel_file:
         return tuple(excel_file.sheet_names)
 
 
+def load_sheet_names():
+    return _load_sheet_names(_database_version())
+
+
 @st.cache_data
-def load_data_sheets(sheet_names):
+def _load_data_sheets(sheet_names, database_version):
     names = [name for name in dict.fromkeys(sheet_names) if name]
     return pd.read_excel(FILE_PATH, sheet_name=names) if names else {}
 
 
+def load_data_sheets(sheet_names):
+    return _load_data_sheets(sheet_names, _database_version())
+
+
 @st.cache_data
-def load_heymann_data():
+def _load_heymann_data(database_version):
     """Obtiene la serie mensual bilateral con EE.UU. desde el inventario maestro."""
     with pd.ExcelFile(FILE_PATH) as excel_file:
         metadata = pd.read_excel(excel_file, sheet_name='Codificacion')
@@ -134,6 +154,10 @@ def load_heymann_data():
     result[column] = pd.to_numeric(data[column], errors='coerce')
     result.iloc[:, 0] = pd.to_datetime(result.iloc[:, 0], errors='coerce')
     return result.dropna().sort_values(result.columns[0]).reset_index(drop=True)
+
+
+def load_heymann_data():
+    return _load_heymann_data(_database_version())
 
 def get_full_excel_bytes():
     with open(FILE_PATH, "rb") as f:
