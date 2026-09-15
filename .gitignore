@@ -1,3 +1,5 @@
 __pycache__/
 *.pyc
 bds/BD.backup-*.xlsx
+3 Tipo de Cambio Real.xlsx
+.streamlit-run*.log

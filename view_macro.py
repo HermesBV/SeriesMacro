@@ -371,7 +371,7 @@ def _render_buscador(df_index):
         f"Cantidad de series: {len(df_filtered_view):,} de {len(df_index):,}"
         .replace(",", ".")
     )
-    df_filtered_view["Seleccionar"] = df_filtered_view["ID"].isin(st.session_state["selected_ids"])
+    df_filtered_view["Seleccionar"] = df_filtered_view["_Clave"].isin(st.session_state["selected_ids"])
     df_filtered_view["Fuente_Label"] = df_filtered_view["Fuente"].apply(
         lambda x: "MECON" if str(x).startswith("https://www.economia.gob.ar") else x
     )
@@ -399,8 +399,8 @@ def _render_buscador(df_index):
         key=stable_key,
     )
 
-    new_selection = set(edited_df[edited_df["Seleccionar"]]["ID"])
-    old_selection_in_view = set(df_filtered_view[df_filtered_view["Seleccionar"]]["ID"])
+    new_selection = set(edited_df[edited_df["Seleccionar"]]["_Clave"])
+    old_selection_in_view = set(df_filtered_view[df_filtered_view["Seleccionar"]]["_Clave"])
 
     added_ids = new_selection - old_selection_in_view
     removed_ids = old_selection_in_view - new_selection
@@ -415,7 +415,7 @@ def _construir_items_series(selected_rows_global, all_data_sheets):
     items = []
 
     for idx, row in selected_rows_global.iterrows():
-        var_id = str(row["ID"])
+        var_id = str(row["_Clave"])
 
         if var_id not in st.session_state["axes_config"]:
             st.session_state["axes_config"][var_id] = EJE_IZQUIERDO
@@ -568,7 +568,7 @@ def _render_grafico(items):
 
 def show(df_index):
     """Vista Macro. Orden real: grafico, grilla de series, botones y buscador."""
-    selected_rows_global = df_index[df_index["ID"].isin(st.session_state["selected_ids"])].copy()
+    selected_rows_global = df_index[df_index["_Clave"].isin(st.session_state["selected_ids"])].copy()
     selected_sheets = tuple(selected_rows_global["Pestaña"].dropna().astype(str).unique())
     all_data_sheets = utils.load_data_sheets(selected_sheets)
 

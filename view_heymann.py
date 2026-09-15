@@ -61,7 +61,7 @@ def plot_heymann_camel(df):
     
     return fig
 
-def show(all_data_sheets):
+def show(df_heymann):
     """Función principal para renderizar la vista de Heymann"""
     # Sin título Markdown superior
     st.markdown(
@@ -88,9 +88,7 @@ def show(all_data_sheets):
         unsafe_allow_html=True,
     )
     
-    if utils.SHEET_HEYMANN in all_data_sheets:
-        df_heymann = all_data_sheets[utils.SHEET_HEYMANN]
-        
+    if df_heymann is not None:
         fig = plot_heymann_camel(df_heymann)
         
         if fig:
@@ -134,4 +132,4 @@ def show(all_data_sheets):
         else:
             st.error("Error al procesar los datos para el gráfico.")
     else:
-        st.error(f"No se encontró la pestaña '{utils.SHEET_HEYMANN}' en el archivo Excel.")
+        st.error("No se encontró en el inventario la serie mensual ITCRB Estados Unidos del BCRA.")

@@ -161,7 +161,10 @@ def main():
     if df_index is None:
         return
     sheet_names = utils.load_sheet_names()
-    has_heymann_data = utils.SHEET_HEYMANN in sheet_names
+    has_heymann_data = (
+        df_index['Código fuente'].astype(str).eq(utils.SOURCE_HEYMANN)
+        & df_index['ID'].astype(str).eq(utils.ID_HEYMANN)
+    ).any()
     if st.session_state['view'] == 'other' and not has_heymann_data:
         st.session_state['view'] = 'macro'
 
@@ -195,7 +198,7 @@ def main():
             st.rerun()
 
     if st.session_state['view'] == 'other':
-        view_heymann.show(utils.load_data_sheets((utils.SHEET_HEYMANN,)))
+        view_heymann.show(utils.load_heymann_data())
     else:
         view_macro.show(df_index)
 
