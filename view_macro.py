@@ -318,7 +318,7 @@ def _render_botones_descarga(selected_rows_global, all_data_sheets):
     )
 
     excel_filtered = utils.convert_df_to_excel_filtered(selected_rows_global, all_data_sheets)
-    excel_full = utils.get_full_excel_bytes()
+    excel_full = utils.get_full_database_archive()
 
     b_col1, b_void, b_col3, b_col4 = st.columns([1.9, 2.7, 2.7, 2.7], gap="small")
 
@@ -329,7 +329,7 @@ def _render_botones_descarga(selected_rows_global, all_data_sheets):
             st.session_state["visibility_map"] = {}
             st.session_state["color_map"] = {}
             st.session_state["chart_type_map"] = {}
-            for k in ["s_text", "s_tema", "s_freq"]:
+            for k in ["s_text", "s_institucion", "s_area", "s_tema", "s_freq"]:
                 if k in st.session_state:
                     del st.session_state[k]
             st.rerun()
@@ -344,10 +344,10 @@ def _render_botones_descarga(selected_rows_global, all_data_sheets):
         )
     with b_col4:
         st.download_button(
-            label="Descargar Base (Completa)",
+            label="Descargar Base + Índice",
             data=excel_full,
-            file_name="BD_completa.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            file_name="SeriesMacro_base_e_indice.zip",
+            mime="application/zip",
             width="stretch",
         )
 
@@ -355,20 +355,29 @@ def _render_botones_descarga(selected_rows_global, all_data_sheets):
 def _render_buscador(df_index):
     """Buscador inferior y sincronizacion de seleccion."""
     st.markdown("### Buscador General")
-    col1, col3, col4 = st.columns([2, 1, 1])
+    col1, col2, col3, col4, col5 = st.columns([2.2, 1, 1, 1, 0.8])
 
     with col1:
         search_text = st.text_input("Buscar", placeholder="ej. PIB, Argentina...", key="s_text")
+    with col2:
+        institutions = ["Todas"] + sorted(df_index["Institución"].dropna().unique().tolist())
+        institution_sel = st.selectbox("Institución", institutions, key="s_institucion")
     with col3:
-        temas = ["Todos"] + sorted(list(df_index["Tema"].unique()))
-        tema_sel = st.selectbox("Filtrar por Tema", temas, key="s_tema")
+        areas = ["Todas"] + sorted(df_index["Área"].dropna().unique().tolist())
+        area_sel = st.selectbox("Área", areas, key="s_area")
     with col4:
+        temas = ["Todos"] + sorted(list(df_index["Tema"].unique()))
+        tema_sel = st.selectbox("Tema", temas, key="s_tema")
+    with col5:
         freqs = ["Todas"] + sorted(list(df_index["Frecuencia"].unique()))
-        freq_sel = st.selectbox("Filtrar por Frecuencia", freqs, key="s_freq")
+        freq_sel = st.selectbox("Frecuencia", freqs, key="s_freq")
 
-    df_filtered_view = utils.filter_data(df_index, search_text, tema_sel, freq_sel)
+    df_filtered_view = utils.filter_data(
+        df_index, search_text, institution_sel, area_sel, tema_sel, freq_sel
+    )
+    total_series = utils.filter_data(df_index, "", "Todas", "Todas", "Todos", "Todas")
     st.caption(
-        f"Cantidad de series: {len(df_filtered_view):,} de {len(df_index):,}"
+        f"Cantidad de series: {len(df_filtered_view):,} de {len(total_series):,}"
         .replace(",", ".")
     )
     df_filtered_view["Seleccionar"] = df_filtered_view["_Clave"].isin(st.session_state["selected_ids"])
@@ -376,7 +385,7 @@ def _render_buscador(df_index):
         lambda x: "MECON" if str(x).startswith("https://www.economia.gob.ar") else x
     )
 
-    stable_key = f"editor_v2_{search_text}_{tema_sel}_{freq_sel}"
+    stable_key = f"editor_v3_{search_text}_{institution_sel}_{area_sel}_{tema_sel}_{freq_sel}"
 
     edited_df = st.data_editor(
         df_filtered_view,
@@ -387,11 +396,11 @@ def _render_buscador(df_index):
         },
         column_order=[
             "Seleccionar", "Nombre serie", "Detalle", "Unidades",
-            "Valoración", "Tema", "Frecuencia",
+            "Valoración", "Institución", "Área", "Tema", "Frecuencia",
         ],
         disabled=[
             "Nombre serie", "Detalle", "Unidades", "Valoración",
-            "Tema", "Frecuencia", "ID",
+            "Institución", "Área", "Tema", "Frecuencia", "ID",
         ],
         hide_index=True,
         width="stretch",

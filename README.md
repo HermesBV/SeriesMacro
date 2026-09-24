@@ -3,9 +3,9 @@ Proyecto del IIEP, área Macro
 
 ## Contrato de datos
 
-La aplicación usa `bds/BD.xlsx`. El esquema actual de SeriesScraper define:
+La aplicación usa `bds/BD.xlsx` para los datos y `bds/IndiceSeries.xlsx` para el inventario. El esquema actual de SeriesScraper define:
 
-- `Codificacion`: inventario maestro multi-fuente. La clave es (`Código fuente`, `ID`); `ID` conserva el identificador nativo o uno estable asignado cuando la fuente no publica identificadores.
+- `Codificacion`, dentro de `IndiceSeries.xlsx`: inventario maestro multi-fuente. La clave es (`Código fuente`, `ID`); `ID` conserva el identificador nativo o uno estable asignado cuando la fuente no publica identificadores.
 - Las demás hojas contienen datos y deben tener una columna `fecha`; cada serie se localiza mediante `Pestaña BD` y `Columna BD`.
 
 El buscador muestra `Título`, `Detalle`, unidades, valoración, tema y frecuencia, además de la cantidad total o filtrada de series. `Valoración` distingue precios corrientes y constantes sólo cuando los metadatos contienen evidencia inequívoca. Si dos series conservan exactamente los mismos metadatos visibles, `Detalle` agrega su ID de origen para que nunca resulten indistinguibles.
