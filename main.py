@@ -81,6 +81,26 @@ def main():
         div[data-baseweb="select"] > div {{
             background-color: #FFFFFF !important; color: #000000 !important; border: 1px solid #545454 !important;
         }}
+        div[data-baseweb="popover"] [role="option"],
+        div[data-baseweb="popover"] [role="listbox"] {{
+            font-family: 'Poppins', sans-serif !important;
+            font-size: 0.9rem !important;
+            line-height: 1.35 !important;
+            font-weight: 400 !important;
+            filter: none !important;
+            transform: none !important;
+        }}
+        [role="menu"] {{ min-width: 210px !important; padding: 6px !important; }}
+        [role="menuitem"] {{
+            min-height: 34px !important;
+            padding: 7px 12px !important;
+            font-family: 'Poppins', sans-serif !important;
+            font-size: 0.9rem !important;
+            line-height: 1.25 !important;
+            white-space: nowrap !important;
+            filter: none !important;
+            transform: none !important;
+        }}
         
         /* Botones Verdes por defecto */
         div.stButton > button,
@@ -165,6 +185,8 @@ def main():
         df_index['Código fuente'].astype(str).eq(utils.SOURCE_HEYMANN)
         & df_index['ID'].astype(str).eq(utils.ID_HEYMANN)
     ).any()
+    if has_heymann_data:
+        view_heymann.preload_chart()
     if st.session_state['view'] == 'other' and not has_heymann_data:
         st.session_state['view'] = 'macro'
 

@@ -323,13 +323,8 @@ def _render_botones_descarga(selected_rows_global, all_data_sheets):
     b_col1, b_void, b_col3, b_col4 = st.columns([1.9, 2.7, 2.7, 2.7], gap="small")
 
     with b_col1:
-        if st.button("Limpiar búsqueda", width="stretch"):
-            st.session_state["selected_ids"] = set()
-            st.session_state["axes_config"] = {}
-            st.session_state["visibility_map"] = {}
-            st.session_state["color_map"] = {}
-            st.session_state["chart_type_map"] = {}
-            for k in ["s_text", "s_institucion", "s_area", "s_tema", "s_freq"]:
+        if st.button("Limpiar filtros", width="stretch"):
+            for k in ["s_text", "s_institucion", "s_area", "s_tema", "s_freq", "s_valoracion", "s_hierarchy_0", "s_hierarchy_1", "s_hierarchy_2", "s_hierarchy_3"]:
                 if k in st.session_state:
                     del st.session_state[k]
             st.rerun()
@@ -355,27 +350,47 @@ def _render_botones_descarga(selected_rows_global, all_data_sheets):
 def _render_buscador(df_index):
     """Buscador inferior y sincronizacion de seleccion."""
     st.markdown("### Buscador General")
-    col1, col2, col3, col4, col5 = st.columns([2.2, 1, 1, 1, 0.8])
+    col1, col2, col3 = st.columns([2.5, 1, 1])
 
     with col1:
         search_text = st.text_input("Buscar", placeholder="ej. PIB, Argentina...", key="s_text")
     with col2:
-        institutions = ["Todas"] + sorted(df_index["Institución"].dropna().unique().tolist())
-        institution_sel = st.selectbox("Institución", institutions, key="s_institucion")
-    with col3:
-        areas = ["Todas"] + sorted(df_index["Área"].dropna().unique().tolist())
-        area_sel = st.selectbox("Área", areas, key="s_area")
-    with col4:
-        temas = ["Todos"] + sorted(list(df_index["Tema"].unique()))
+        temas = ["Todos"] + sorted(df_index["Tema"].dropna().astype(str).unique().tolist())
         tema_sel = st.selectbox("Tema", temas, key="s_tema")
-    with col5:
-        freqs = ["Todas"] + sorted(list(df_index["Frecuencia"].unique()))
+    with col3:
+        frequency_order = ["Diaria", "Mensual", "Trimestral", "Semestral", "Anual", "Irregular"]
+        available_freqs = set(df_index["Frecuencia"].dropna().astype(str))
+        freqs = ["Todas"] + [value for value in frequency_order if value in available_freqs]
+        freqs += sorted(available_freqs.difference(frequency_order))
         freq_sel = st.selectbox("Frecuencia", freqs, key="s_freq")
 
+    institutions = ["Todas"] + sorted(df_index["Institución"].dropna().unique().tolist())
+    institution_col, *level_cols = st.columns(5)
+    with institution_col:
+        institution_sel = st.selectbox("Institución", institutions, key="s_institucion")
+    institution_rows = df_index if institution_sel == "Todas" else df_index[df_index["Institución"] == institution_sel]
+    hierarchy_cols = ["Área", "Subárea 1", "Subárea 2", "Subárea 3"]
+    hierarchy_values = []
+    parent_rows = institution_rows
+    for level, (column, level_col) in enumerate(zip(hierarchy_cols, level_cols)):
+        values = ["Todas"] + sorted(v for v in parent_rows[column].dropna().astype(str).str.strip().unique() if v)
+        key = f"s_hierarchy_{level}"
+        if key in st.session_state and st.session_state[key] not in values:
+            st.session_state[key] = "Todas"
+        with level_col:
+            selected = st.selectbox(column, values, key=key)
+        hierarchy_values.append(selected)
+        if selected != "Todas":
+            parent_rows = parent_rows[parent_rows[column] == selected]
+    valuation_col, _ = st.columns([1, 4])
+    with valuation_col:
+        valuations = ["Todas"] + sorted(df_index["Valoración"].dropna().astype(str).unique().tolist())
+        valuation_sel = st.selectbox("Valoración", valuations, key="s_valoracion")
+
     df_filtered_view = utils.filter_data(
-        df_index, search_text, institution_sel, area_sel, tema_sel, freq_sel
+        df_index, search_text, institution_sel, hierarchy_values, tema_sel, freq_sel, valuation_sel
     )
-    total_series = utils.filter_data(df_index, "", "Todas", "Todas", "Todos", "Todas")
+    total_series = utils.filter_data(df_index, "", "Todas", ["Todas"] * 4, "Todos", "Todas")
     st.caption(
         f"Cantidad de series: {len(df_filtered_view):,} de {len(total_series):,}"
         .replace(",", ".")
@@ -385,26 +400,36 @@ def _render_buscador(df_index):
         lambda x: "MECON" if str(x).startswith("https://www.economia.gob.ar") else x
     )
 
-    stable_key = f"editor_v3_{search_text}_{institution_sel}_{area_sel}_{tema_sel}_{freq_sel}"
+    stable_key = f"editor_v5_{search_text}_{institution_sel}_{hierarchy_values}_{tema_sel}_{freq_sel}_{valuation_sel}"
 
     edited_df = st.data_editor(
         df_filtered_view,
         column_config={
-            "Seleccionar": st.column_config.CheckboxColumn("Seleccionar", default=False),
-            "Nombre serie": st.column_config.TextColumn("Título"),
-            "Detalle": st.column_config.TextColumn("Detalle"),
+            "Seleccionar": st.column_config.CheckboxColumn("Seleccionar", default=False, width="small"),
+            "Nombre serie": st.column_config.TextColumn("Título", width="medium"),
+            "Detalle": st.column_config.TextColumn("Detalle", width="large"),
+            "Unidad": st.column_config.TextColumn("Unidad", width="medium"),
+            "Desde": st.column_config.TextColumn("Desde", width="small"),
+            "Hasta": st.column_config.TextColumn("Hasta", width="small"),
+            "Institución": st.column_config.TextColumn("Institución", width="small"),
+            "Área": st.column_config.TextColumn("Área", width="medium"),
+            "Subárea 1": st.column_config.TextColumn("Subárea 1", width="medium"),
+            "Subárea 2": st.column_config.TextColumn("Subárea 2", width="medium"),
+            "Subárea 3": st.column_config.TextColumn("Subárea 3", width="medium"),
+            "Tema": st.column_config.TextColumn("Tema", width="small"),
+            "Frecuencia": st.column_config.TextColumn("Frecuencia", width="small"),
         },
         column_order=[
-            "Seleccionar", "Nombre serie", "Detalle", "Unidades",
-            "Valoración", "Institución", "Área", "Tema", "Frecuencia",
+            "Seleccionar", "Nombre serie", "Detalle", "Unidad", "Valoración", "Frecuencia",
+            "Desde", "Hasta", "Tema", "Institución", "Área", "Subárea 1", "Subárea 2", "Subárea 3",
         ],
         disabled=[
-            "Nombre serie", "Detalle", "Unidades", "Valoración",
-            "Institución", "Área", "Tema", "Frecuencia", "ID",
+            "Nombre serie", "Detalle", "Unidad", "Desde", "Hasta", "Valoración",
+            "Institución", "Área", "Subárea 1", "Subárea 2", "Subárea 3", "Tema", "Frecuencia", "ID",
         ],
         hide_index=True,
         width="stretch",
-        height=300,
+        height=520,
         key=stable_key,
     )
 

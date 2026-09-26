@@ -29,7 +29,7 @@ PALETA_COLORES = [
 
 # --- FUNCIONES DE CARGA DE DATOS ---
 CODED_METADATA_COLUMNS = {
-    'ID', 'Código fuente', 'Nombre serie', 'Variable', 'Unidades', 'Valoración', 'Descripción',
+    'ID', 'Código fuente', 'Nombre serie', 'Variable', 'Valoración', 'Descripción',
     'Frecuencia', 'Pestaña BD', 'Columna BD', 'Origen', 'Tema dataset', 'Estado', 'Fuente',
 }
 
@@ -44,70 +44,55 @@ def _load_coded_metadata(excel_file):
     if not CODED_METADATA_COLUMNS.issubset(df.columns):
         return None
 
+    if 'Unidad' not in df.columns and 'Unidades' not in df.columns:
+        return None
+
     frequency_names = {
         'A': 'Anual', 'S': 'Semestral', 'T': 'Trimestral',
         'M': 'Mensual', 'D': 'Diaria', 'I': 'Irregular',
     }
-    def institucion(row):
-        by_code = {
-            'datos.gob.ar': 'INDEC / BCRA / otros organismos',
-            'indec-sipm': 'INDEC', 'indec-emae': 'INDEC', 'indec-supermercados': 'INDEC',
-            'indec-isac': 'INDEC', 'indec-ipi-manufacturero': 'INDEC', 'indec-ica': 'INDEC',
-            'mecon-hacienda-caja': 'MECON', 'bcra-dmd': 'BCRA',
-            'bcra-pas': 'BCRA', 'bcra-itc': 'BCRA', 'bcra-mc-bc': 'BCRA',
-            'bcra-com3500': 'BCRA', 'bcra-bandas': 'BCRA', 'bcra': 'BCRA',
-            'iiep': 'IIEP-UBA-CONICET',
-        }
-        source_code = str(row.get('Código fuente', '')).strip()
-        if source_code in by_code and by_code[source_code] != 'INDEC / BCRA / otros organismos':
-            return by_code[source_code]
-        text = ' '.join(str(row.get(c, '')) for c in ['Responsable dataset', 'Origen']).casefold()
-        if 'indec' in text or 'estadística y censos' in text:
-            return 'INDEC'
-        if 'banco central' in text or 'bcra' in text:
-            return 'BCRA'
-        if 'ministerio de econom' in text or 'secretaría de hacienda' in text or 'secretaria de hacienda' in text:
-            return 'Ministerio de Economía'
-        if 'iiep' in text or 'interdisciplinario de econom' in text:
-            return 'IIEP-UBA-CONICET'
-        value = row.get('Responsable dataset') or row.get('Origen')
-        return str(value).strip() if pd.notna(value) and str(value).strip() else 'Sin informar'
-
-    source = df['Código fuente'].fillna('').astype(str)
-    broad = df['Tema dataset'].fillna('Sin clasificar').astype(str).str.strip()
-    specific = df['Título dataset'].fillna('').astype(str).str.strip()
-    df['Institución'] = df.apply(institucion, axis=1)
-    def split_hierarchy(row):
-        broad_value = str(row.get('Tema dataset') or '').strip()
-        specific_value = str(row.get('Título dataset') or '').strip()
-        code = str(row.get('Código fuente') or '').strip()
-        if '/' in broad_value:
-            parts = [part.strip() for part in broad_value.split('/') if part.strip()]
-            institution_value = str(row.get('Institución') or '').strip()
-            if parts and parts[0].casefold() == institution_value.casefold():
-                parts = parts[1:]
-            if not parts:
-                return ('Sin clasificar', 'Sin clasificar')
-            return (' / '.join(parts[:-1]) or parts[0], parts[-1])
-        if code in {'bcra-dmd', 'bcra-pas'}:
-            return (specific_value or broad_value, broad_value or specific_value)
-        area = broad_value or 'Sin clasificar'
-        # El título del dataset mantiene la separación de apéndices y productos.
-        topic = specific_value or broad_value or 'Sin clasificar'
-        return area, topic
-
-    hierarchy = df.apply(split_hierarchy, axis=1, result_type='expand')
-    df['Área'] = hierarchy[0]
-    df['Tema'] = hierarchy[1]
+    # La clasificación se registra en Codificacion y no se infiere de títulos de dataset.
+    if 'Institución' not in df.columns:
+        code = df['Código fuente'].fillna('').astype(str).str.strip()
+        owners = df.get('Responsable dataset', pd.Series('', index=df.index)).fillna('').astype(str).str.casefold()
+        df['Institución'] = 'Sin clasificar'
+        df.loc[code.str.startswith('indec-') | owners.str.contains('indec'), 'Institución'] = 'INDEC'
+        df.loc[code.str.startswith('bcra') | owners.str.contains('banco central'), 'Institución'] = 'BCRA'
+        df.loc[code.str.startswith('mecon-') | owners.str.contains('hacienda|ministerio de econom'), 'Institución'] = 'MECON'
+        df.loc[code.eq('iiep'), 'Institución'] = 'IIEP'
+    for column in ['Área', 'Subárea 1', 'Subárea 2', 'Subárea 3']:
+        if column not in df.columns:
+            df[column] = ''
+    if 'Tema' not in df.columns:
+        df['Tema'] = df['Tema dataset'].fillna('Sin clasificar').astype(str).str.strip()
     df['Frecuencia código'] = df['Frecuencia'].astype(str).str.strip()
     df['Frecuencia'] = df['Frecuencia código'].map(frequency_names).fillna(df['Frecuencia código'])
-    df = df.rename(columns={'Pestaña BD': 'Pestaña'})
+    df = df.rename(columns={'Pestaña BD': 'Pestaña', 'Unidades': 'Unidad'})
     df['Detalle'] = df['Descripción'].fillna('').astype(str).str.strip()
+    def format_period(value, code):
+        date = pd.to_datetime(value, errors='coerce')
+        if pd.isna(date):
+            return ''
+        if code == 'A':
+            return date.strftime('%Y')
+        if code == 'S':
+            return date.strftime('%Y-01' if date.month <= 6 else '%Y-07')
+        if code == 'T':
+            month = ((date.month - 1) // 3) * 3 + 1
+            return f'{date.year:04d}-{month:02d}'
+        if code == 'M':
+            return date.strftime('%Y-%m')
+        return date.strftime('%Y-%m-%d')
+    codes = df['Frecuencia código'].astype(str).str.strip()
+    if 'Desde' not in df.columns:
+        df['Desde'] = [format_period(value, code) for value, code in zip(df.get('Fecha inicio'), codes)]
+    if 'Hasta' not in df.columns:
+        df['Hasta'] = [format_period(value, code) for value, code in zip(df.get('Fecha fin'), codes)]
 
     # Algunos catálogos publican dos series con exactamente los mismos metadatos
     # visibles. En esos casos el ID nativo es la única diferencia verificable.
     visible_columns = [
-        'Nombre serie', 'Detalle', 'Unidades', 'Valoración', 'Tema', 'Frecuencia',
+        'Nombre serie', 'Detalle', 'Unidad', 'Valoración', 'Tema', 'Frecuencia',
     ]
     visual_key = df[visible_columns].fillna('').astype(str).apply(
         lambda column: column.str.replace(r'\s+', ' ', regex=True).str.strip().str.casefold()
@@ -122,11 +107,25 @@ def _load_coded_metadata(excel_file):
 def _only_chartable_series(df, excel_file):
     """Separa series numéricas de entradas documentales como Comunicaciones BCRA."""
     sheet_names = set(excel_file.sheet_names)
-    return df[
+    chartable = df[
         df['Pestaña'].isin(sheet_names)
         & df['Columna BD'].notna()
         & df['Columna BD'].astype(str).str.strip().ne('')
     ].copy()
+    # Hacienda queda en pausa hasta que se reemplace su scraper. Mantener
+    # registros y datos locales permite retomarlos, pero no ofrecerlos en la web.
+    source_code = chartable['Código fuente'].fillna('').astype(str).str.casefold()
+    catalog_id = chartable.get('Catálogo ID', pd.Series('', index=chartable.index)).fillna('').astype(str).str.casefold()
+    dataset_id = chartable.get('Dataset ID', pd.Series('', index=chartable.index)).fillna('').astype(str).str.casefold()
+    dataset_title = chartable.get('Título dataset', pd.Series('', index=chartable.index)).fillna('').astype(str).str.casefold()
+    owner = chartable.get('Responsable dataset', pd.Series('', index=chartable.index)).fillna('').astype(str).str.casefold()
+    paused_hacienda = (
+        source_code.eq('mecon-hacienda-caja')
+        | (catalog_id.eq('sspm') & dataset_id.eq('452'))
+        | dataset_title.str.contains('informe mensual de ingresos y gastos del sector público nacional no financiero', regex=False)
+        | owner.str.contains('secretaría de hacienda', regex=False)
+    )
+    return chartable.loc[~paused_hacienda].copy()
 
 
 def get_base64_image(image_path):
@@ -223,27 +222,30 @@ def get_full_database_archive():
     return output.getvalue()
 
 # --- FUNCIONES DE FILTRADO Y EXPORTACIÓN ---
-def filter_data(df, search_text, institution_filter, area_filter, topic_filter, freq_filter):
+def filter_data(df, search_text, institution_filter, hierarchy_filters, topic_filter, freq_filter, valuation_filter="Todas"):
     dff = df.copy()
     if search_text:
         mask = (
             dff['Nombre serie'].astype(str).str.contains(search_text, case=False, na=False) |
-            dff['Variable'].astype(str).str.contains(search_text, case=False, na=False) |
             dff['Detalle'].astype(str).str.contains(search_text, case=False, na=False) |
-            dff['Pestaña'].astype(str).str.contains(search_text, case=False, na=False) |
             dff['Institución'].astype(str).str.contains(search_text, case=False, na=False) |
             dff['Área'].astype(str).str.contains(search_text, case=False, na=False) |
-            dff['Tema'].astype(str).str.contains(search_text, case=False, na=False)
+            dff['Subárea 1'].astype(str).str.contains(search_text, case=False, na=False) |
+            dff['Subárea 2'].astype(str).str.contains(search_text, case=False, na=False) |
+            dff['Subárea 3'].astype(str).str.contains(search_text, case=False, na=False)
         )
         dff = dff[mask]
     if institution_filter != "Todas":
         dff = dff[dff['Institución'] == institution_filter]
-    if area_filter != "Todas":
-        dff = dff[dff['Área'] == area_filter]
+    for column, selected in zip(['Área', 'Subárea 1', 'Subárea 2', 'Subárea 3'], hierarchy_filters):
+        if selected != 'Todas':
+            dff = dff[dff[column] == selected]
     if topic_filter != "Todos":
         dff = dff[dff['Tema'] == topic_filter]
     if freq_filter != "Todas":
         dff = dff[dff['Frecuencia'] == freq_filter]
+    if valuation_filter != "Todas":
+        dff = dff[dff['Valoración'] == valuation_filter]
     return dff
 
 def convert_df_to_excel_filtered(metadata_selected, data_dict):

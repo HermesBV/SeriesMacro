@@ -45,7 +45,7 @@ def plot_heymann_camel(df):
     ax.axvline(last_val, linestyle='--', color='#049c82', label=f'{last_date_str} ({last_val:.2f})')
 
     # Textos (Actualizado con colores oscuros)
-    ax.set_title('Estimación de Densidad Kernel para Tipo de Cambio Real Oficial Dic 2001=100', color='black', fontsize=14, pad=15)
+    ax.set_title('Estimación de Densidad Kernel para ITCRB Estados Unidos 17-dic-2015=100', color='black', fontsize=14, pad=15)
     ax.set_xlabel('Valor del Índice', color='black')
     ax.set_ylabel('Densidad', color='black')
     
@@ -60,6 +60,27 @@ def plot_heymann_camel(df):
     plt.tight_layout()
     
     return fig
+
+
+@st.cache_data(show_spinner=False)
+def _heymann_chart_png(database_version):
+    data = utils.load_heymann_data()
+    if data is None:
+        return None
+    fig = plot_heymann_camel(data)
+    if fig is None:
+        return None
+    output = io.BytesIO()
+    try:
+        fig.savefig(output, format="png", transparent=True, bbox_inches="tight")
+        return output.getvalue()
+    finally:
+        plt.close(fig)
+
+
+def preload_chart():
+    """Prepara el gráfico una vez por versión de la base al iniciar la página."""
+    return _heymann_chart_png(utils._database_version())
 
 def show(df_heymann):
     """Función principal para renderizar la vista de Heymann"""
@@ -89,14 +110,14 @@ def show(df_heymann):
     )
     
     if df_heymann is not None:
-        fig = plot_heymann_camel(df_heymann)
+        chart_png = preload_chart()
         
-        if fig:
+        if chart_png:
             # Layout: 6 partes gráfico, 1 parte botones (para que sean angostos)
             col_graph, col_buttons = st.columns([6, 1.18], gap="medium")
             
             with col_graph:
-                st.pyplot(fig, width="stretch")
+                st.image(chart_png, width="stretch")
             
             with col_buttons:
                 # Espaciadores para bajar los botones y centrarlos verticalmente respecto al gráfico
@@ -108,11 +129,9 @@ def show(df_heymann):
                 st.write("")
                 
                 # Botón Descargar Gráfico
-                buf = io.BytesIO()
-                fig.savefig(buf, format="png", transparent=True, bbox_inches='tight')
                 st.download_button(
                     label="Descargar Gráfico",
-                    data=buf.getvalue(),
+                    data=chart_png,
                     file_name="camello_heymann.png",
                     mime="image/png",
                     width="stretch"
@@ -132,4 +151,4 @@ def show(df_heymann):
         else:
             st.error("Error al procesar los datos para el gráfico.")
     else:
-        st.error("No se encontró en el inventario la serie mensual ITCRB Estados Unidos del BCRA.")
+        st.error("No se encontró en el inventario la serie mensual ITCRB Estados Unidos empalmada por el IIEP.")

@@ -1,5 +1,9 @@
 __pycache__/
 *.pyc
+venv/
+.streamlit/secrets.toml
 bds/BD.backup-*.xlsx
+bds/BD.*.tmp.xlsx
+bds/IndiceSeries.backup-*.xlsx
 3 Tipo de Cambio Real.xlsx
 .streamlit-run*.log
