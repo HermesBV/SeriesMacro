@@ -4,6 +4,8 @@ venv/
 .streamlit/secrets.toml
 bds/BD.backup-*.xlsx
 bds/BD.*.tmp.xlsx
+bds/IndiceSeries.*.tmp.xlsx
 bds/IndiceSeries.backup-*.xlsx
 3 Tipo de Cambio Real.xlsx
 .streamlit-run*.log
+reportes/series_visualmente_iguales.csv

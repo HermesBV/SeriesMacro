@@ -68,7 +68,6 @@ def _load_coded_metadata(excel_file):
     df['Frecuencia código'] = df['Frecuencia'].astype(str).str.strip()
     df['Frecuencia'] = df['Frecuencia código'].map(frequency_names).fillna(df['Frecuencia código'])
     df = df.rename(columns={'Pestaña BD': 'Pestaña', 'Unidades': 'Unidad'})
-    df['Detalle'] = df['Descripción'].fillna('').astype(str).str.strip()
     def format_period(value, code):
         date = pd.to_datetime(value, errors='coerce')
         if pd.isna(date):
@@ -88,6 +87,25 @@ def _load_coded_metadata(excel_file):
         df['Desde'] = [format_period(value, code) for value, code in zip(df.get('Fecha inicio'), codes)]
     if 'Hasta' not in df.columns:
         df['Hasta'] = [format_period(value, code) for value, code in zip(df.get('Fecha fin'), codes)]
+
+    def build_detail(row):
+        description = str(row['Descripción']).strip() if pd.notna(row['Descripción']) else ''
+        if len(description) >= 45:
+            return description
+        parts = [description] if description else []
+        dataset = str(row['Título dataset']).strip() if pd.notna(row.get('Título dataset')) else ''
+        unit = str(row['Unidad']).strip() if pd.notna(row.get('Unidad')) else ''
+        start = str(row['Desde']).strip() if pd.notna(row.get('Desde')) else ''
+        end = str(row['Hasta']).strip() if pd.notna(row.get('Hasta')) else ''
+        if dataset and dataset.casefold() not in description.casefold():
+            parts.append(f'Conjunto: {dataset}')
+        if unit and unit.casefold() not in description.casefold() and unit != 'Ver descripción de la serie':
+            parts.append(f'Unidad: {unit}')
+        if start and end and start != end:
+            parts.append(f'Período: {start}–{end}')
+        return ' · '.join(parts)
+
+    df['Detalle'] = df.apply(build_detail, axis=1)
 
     # Algunos catálogos publican dos series con exactamente los mismos metadatos
     # visibles. En esos casos el ID nativo es la única diferencia verificable.
