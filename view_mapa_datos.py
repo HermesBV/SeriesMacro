@@ -38,9 +38,8 @@ def topic_counts(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def hierarchy_nodes(df: pd.DataFrame) -> pd.DataFrame:
-    """Agrupa institución → área → subáreas y conserva series sin nivel inferior."""
+    """Agrupa institución → área → subáreas hasta el último nivel real."""
     prefix_counts: Counter[tuple[str, ...]] = Counter()
-    terminal_counts: Counter[tuple[str, ...]] = Counter()
     columns = [df[level].map(_clean) if level in df else pd.Series("", index=df.index) for level in LEVELS]
     for values in zip(*columns):
         path = []
@@ -51,17 +50,11 @@ def hierarchy_nodes(df: pd.DataFrame) -> pd.DataFrame:
         for level in range(last_filled + 1):
             path.append(values[level] or "Sin clasificar")
             prefix_counts[tuple(path)] += 1
-        terminal_counts[tuple(path)] += 1
 
     records = []
     for path, count in sorted(prefix_counts.items(), key=lambda item: (len(item[0]), item[0])):
         records.append({"id": NODE_SEP.join(path), "parent": NODE_SEP.join(path[:-1]),
                         "label": path[-1], "count": count, "level": len(path) - 1})
-    for path, count in terminal_counts.items():
-        if len(path) < len(LEVELS):
-            records.append({"id": NODE_SEP.join((*path, "Sin mayor detalle")),
-                            "parent": NODE_SEP.join(path), "label": "Sin mayor detalle",
-                            "count": count, "level": len(path)})
     return pd.DataFrame(records)
 
 
@@ -103,7 +96,8 @@ def _branch_html(nodes: pd.DataFrame) -> str:
         children.setdefault(node["parent"], []).append(node)
     for siblings in children.values():
         siblings.sort(key=lambda node: (
-            node["label"].casefold() in {"sin clasificar", "sin mayor detalle"},
+            node["label"].casefold() == "sin clasificar",
+            -int(node["count"]),
             node["label"].casefold(),
         ))
 
