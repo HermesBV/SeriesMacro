@@ -77,7 +77,8 @@ def _bubble_figure(counts: pd.DataFrame) -> go.Figure:
         wrapped = "<br>".join(textwrap.wrap(str(item["Tema"]), width=17, break_long_words=False))
         fig.add_trace(go.Scatter(
             x=[x], y=[y], mode="markers+text",
-            marker={"size": diameter, "color": COLORS[number % len(COLORS)],
+            marker={"size": diameter,
+                    "color": "#7B858B" if str(item["Tema"]).casefold() == "sin clasificar" else COLORS[number % len(COLORS)],
                     "line": {"color": "#FFFFFF", "width": 3}, "opacity": 0.94},
             text=[f"<b>{wrapped}</b><br>{int(item['Series']):,} series"],
             textposition="middle center", textfont={"color": "#FFFFFF", "size": 12},
@@ -114,30 +115,54 @@ def _branch_html(nodes: pd.DataFrame) -> str:
         if not descendants:
             return f'<div class="tree-leaf">{content}</div>'
         opened = " open" if node["level"] == 0 else ""
-        return (f'<details class="tree-branch"{opened}><summary>{content}</summary>'
+        content += '<span class="tree-expand" aria-hidden="true">+</span>'
+        root_class = " tree-root" if node["level"] == 0 else ""
+        return (f'<details class="tree-branch{root_class}"{opened}><summary>{content}</summary>'
                 f'<div class="tree-children">{"".join(render(child) for child in descendants)}</div>'
                 '</details>')
 
-    roots = "".join(render(node) for node in children.get("", []))
+    institutions = sorted(children.get("", []), key=lambda node: (
+        node["label"].casefold() == "sin clasificar", -int(node["count"]), node["label"].casefold()
+    ))
+    roots = "".join(
+        f'<div class="tree-institution" style="--tree-accent:{COLORS[i % 4]}">{render(node)}</div>'
+        for i, node in enumerate(institutions)
+    )
     return """<style>
-    .classification-tree {display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px;}
+    .classification-tree {
+        display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+        align-items: start; gap: 16px; padding: 8px 0 24px;
+    }
+    .classification-tree .tree-institution {min-width: 0;}
     .classification-tree summary, .classification-tree .tree-leaf {
         box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;
-        gap: 16px; width: min(100%, 420px); min-height: 46px; padding: 10px 14px;
+        gap: 10px; width: 100%; min-height: 46px; padding: 10px 12px;
         border: 1px solid #c9d9d7; border-radius: 9px; background: #f7fbfa;
         color: #173d3a; font-size: 14px;
     }
     .classification-tree summary {cursor: pointer; font-weight: 600;}
     .classification-tree summary:hover {background: #e7f3f0;}
+    .classification-tree summary::marker {content: "";}
+    .classification-tree summary::-webkit-details-marker {display: none;}
     .classification-tree .tree-name {min-width: 0; overflow-wrap: anywhere;}
     .classification-tree .tree-count {flex: none; color: #52716c; font-size: 12px; white-space: nowrap;}
+    .classification-tree .tree-expand {flex: none; margin-left: auto; font-size: 20px; line-height: 1;}
     .classification-tree .tree-children {
-        display: flex; flex-direction: column; gap: 8px; margin: 8px 0 4px 22px;
-        padding-left: 18px; border-left: 2px solid #c9d9d7;
+        display: flex; flex-direction: column; gap: 8px; margin: 8px 0 4px 8px;
+        padding-left: 10px; border-left: 2px solid var(--tree-accent);
     }
-    .classification-tree > .tree-branch > summary {background: #dceeea; border-color: #9fc5bc;}
+    .classification-tree .tree-root > summary {
+        background: var(--tree-accent); border-color: var(--tree-accent); color: #fff;
+    }
+    .classification-tree .tree-root > summary .tree-count {color: #fff;}
+    .classification-tree .tree-root > summary:hover {filter: brightness(1.08);}
+    .classification-tree .tree-children summary {border-left: 4px solid var(--tree-accent);}
     .classification-tree .tree-leaf {background: #fff;}
-    @media (max-width: 600px) {
+    @media (max-width: 1100px) {
+        .classification-tree {grid-template-columns: repeat(2, minmax(0, 1fr));}
+    }
+    @media (max-width: 650px) {
+        .classification-tree {grid-template-columns: minmax(0, 1fr);}
         .classification-tree .tree-children {margin-left: 8px; padding-left: 10px;}
         .classification-tree summary, .classification-tree .tree-leaf {gap: 8px; padding: 8px;}
     }
@@ -148,7 +173,7 @@ def show(df: pd.DataFrame) -> None:
     if df.empty:
         st.info("Todavía no hay series disponibles para mostrar en el mapa.")
         return
-    by_institution = st.toggle("Ver por institución", key="mapa_por_institucion",
+    by_institution = st.toggle("Ver por Tema/Institución", key="mapa_por_institucion",
                                help="Desactivado: Tema. Activado: Institución.")
     st.caption(f"{len(df):,} series disponibles".replace(",", "."))
     if not by_institution:
