@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from html import escape
 import math
 import textwrap
 
@@ -30,7 +31,10 @@ def topic_counts(df: pd.DataFrame) -> pd.DataFrame:
     """Una fila por tema, contada con las series visibles en la web."""
     topics = df["Tema"].map(_clean).replace("", "Sin clasificar")
     result = topics.value_counts().rename_axis("Tema").reset_index(name="Series")
-    return result.sort_values(["Series", "Tema"], ascending=[False, True]).reset_index(drop=True)
+    result["Sin clasificar al final"] = result["Tema"].str.casefold().eq("sin clasificar")
+    return result.sort_values(
+        ["Sin clasificar al final", "Series", "Tema"], ascending=[True, False, True]
+    ).drop(columns="Sin clasificar al final").reset_index(drop=True)
 
 
 def hierarchy_nodes(df: pd.DataFrame) -> pd.DataFrame:
@@ -91,40 +95,66 @@ def _bubble_figure(counts: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def _treemap_figure(nodes: pd.DataFrame, total: int) -> go.Figure:
-    top = nodes[nodes["level"].eq(0)]
-    color_by_institution = {name: COLORS[i % len(COLORS)] for i, name in enumerate(top["label"])}
-    def root_name(node_id: str) -> str:
-        return node_id.split(NODE_SEP, 1)[0]
-    ids = ["Todas las series", *nodes["id"].tolist()]
-    parents = ["", *[parent or "Todas las series" for parent in nodes["parent"]]]
-    labels = ["Todas las series", *nodes["label"].tolist()]
-    values = [total, *nodes["count"].tolist()]
-    colors = ["#E9F0EF", *[color_by_institution[root_name(value)] for value in nodes["id"]]]
-    fig = go.Figure(go.Treemap(
-        ids=ids, parents=parents, labels=labels, values=values,
-        branchvalues="total", maxdepth=3,
-        marker={"colors": colors, "line": {"color": "#FFFFFF", "width": 2}},
-        texttemplate="%{label}<br>%{value:,} series",
-        hovertemplate="%{label}<br>%{value:,} series<extra></extra>",
-        pathbar={"visible": True},
-        root={"color": "#E9F0EF"},
-    ))
-    fig.update_layout(height=690, margin={"l": 8, "r": 8, "t": 14, "b": 8},
-                      paper_bgcolor="#FFFFFF", uniformtext={"minsize": 11, "mode": "hide"})
-    return fig
+def _branch_html(nodes: pd.DataFrame) -> str:
+    """Árbol expandible; instituciones y áreas aparecen desde el inicio."""
+    children: dict[str, list[dict]] = {}
+    for node in nodes.to_dict("records"):
+        children.setdefault(node["parent"], []).append(node)
+    for siblings in children.values():
+        siblings.sort(key=lambda node: (
+            node["label"].casefold() in {"sin clasificar", "sin mayor detalle"},
+            node["label"].casefold(),
+        ))
+
+    def render(node: dict) -> str:
+        label = escape(str(node["label"]))
+        count = f'{int(node["count"]):,}'.replace(",", ".")
+        content = f'<span class="tree-name">{label}</span><span class="tree-count">{count} series</span>'
+        descendants = children.get(node["id"], [])
+        if not descendants:
+            return f'<div class="tree-leaf">{content}</div>'
+        opened = " open" if node["level"] == 0 else ""
+        return (f'<details class="tree-branch"{opened}><summary>{content}</summary>'
+                f'<div class="tree-children">{"".join(render(child) for child in descendants)}</div>'
+                '</details>')
+
+    roots = "".join(render(node) for node in children.get("", []))
+    return """<style>
+    .classification-tree {display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px;}
+    .classification-tree summary, .classification-tree .tree-leaf {
+        box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;
+        gap: 16px; width: min(100%, 420px); min-height: 46px; padding: 10px 14px;
+        border: 1px solid #c9d9d7; border-radius: 9px; background: #f7fbfa;
+        color: #173d3a; font-size: 14px;
+    }
+    .classification-tree summary {cursor: pointer; font-weight: 600;}
+    .classification-tree summary:hover {background: #e7f3f0;}
+    .classification-tree .tree-name {min-width: 0; overflow-wrap: anywhere;}
+    .classification-tree .tree-count {flex: none; color: #52716c; font-size: 12px; white-space: nowrap;}
+    .classification-tree .tree-children {
+        display: flex; flex-direction: column; gap: 8px; margin: 8px 0 4px 22px;
+        padding-left: 18px; border-left: 2px solid #c9d9d7;
+    }
+    .classification-tree > .tree-branch > summary {background: #dceeea; border-color: #9fc5bc;}
+    .classification-tree .tree-leaf {background: #fff;}
+    @media (max-width: 600px) {
+        .classification-tree .tree-children {margin-left: 8px; padding-left: 10px;}
+        .classification-tree summary, .classification-tree .tree-leaf {gap: 8px; padding: 8px;}
+    }
+    </style><div class="classification-tree">""" + roots + "</div>"
 
 
 def show(df: pd.DataFrame) -> None:
     if df.empty:
         st.info("Todavía no hay series disponibles para mostrar en el mapa.")
         return
-    choice = st.selectbox("Visualización", ("Tema", "Institución"), key="mapa_visualizacion")
+    by_institution = st.toggle("Ver por institución", key="mapa_por_institucion",
+                               help="Desactivado: Tema. Activado: Institución.")
     st.caption(f"{len(df):,} series disponibles".replace(",", "."))
-    if choice == "Tema":
+    if not by_institution:
         counts = topic_counts(df)
         st.plotly_chart(_bubble_figure(counts), width="stretch", config={"displayModeBar": False})
     else:
-        st.caption("Hacé clic en un bloque para avanzar por institución, área y subáreas.")
+        st.caption("Instituciones y áreas visibles. Hacé clic en un área para desplegar sus subáreas.")
         nodes = hierarchy_nodes(df)
-        st.plotly_chart(_treemap_figure(nodes, len(df)), width="stretch", config={"displayModeBar": False})
+        st.html(_branch_html(nodes))

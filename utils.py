@@ -65,6 +65,9 @@ def _load_coded_metadata(excel_file):
             df[column] = ''
     if 'Tema' not in df.columns:
         df['Tema'] = df['Tema dataset'].fillna('Sin clasificar').astype(str).str.strip()
+    df['Tema'] = df['Tema'].fillna('').astype(str).str.strip()
+    df.loc[df['Tema'].str.casefold().eq('tipo de cambio'), 'Tema'] = 'Sector externo'
+    df.loc[df['Tema'].eq(''), 'Tema'] = 'Sin clasificar'
     df['Frecuencia código'] = df['Frecuencia'].astype(str).str.strip()
     df['Frecuencia'] = df['Frecuencia código'].map(frequency_names).fillna(df['Frecuencia código'])
     df = df.rename(columns={'Pestaña BD': 'Pestaña', 'Unidades': 'Unidad'})
@@ -183,6 +186,11 @@ def _load_metadata(database_version):
 
 def load_metadata():
     return _load_metadata(_database_version())
+
+
+def sort_classification_values(values):
+    """Ubica los valores sin clasificación al final de los selectores."""
+    return sorted(values, key=lambda value: (str(value).casefold() == 'sin clasificar', str(value).casefold()))
 
 
 @st.cache_data

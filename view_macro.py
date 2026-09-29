@@ -355,7 +355,7 @@ def _render_buscador(df_index):
     with col1:
         search_text = st.text_input("Buscar", placeholder="ej. PIB, Argentina...", key="s_text")
     with col2:
-        temas = ["Todos"] + sorted(df_index["Tema"].dropna().astype(str).unique().tolist())
+        temas = ["Todos"] + utils.sort_classification_values(df_index["Tema"].dropna().astype(str).unique())
         tema_sel = st.selectbox("Tema", temas, key="s_tema")
     with col3:
         frequency_order = ["Diaria", "Mensual", "Trimestral", "Semestral", "Anual", "Irregular"]
@@ -364,7 +364,7 @@ def _render_buscador(df_index):
         freqs += sorted(available_freqs.difference(frequency_order))
         freq_sel = st.selectbox("Frecuencia", freqs, key="s_freq")
 
-    institutions = ["Todas"] + sorted(df_index["Institución"].dropna().unique().tolist())
+    institutions = ["Todas"] + utils.sort_classification_values(df_index["Institución"].dropna().unique())
     institution_col, *level_cols = st.columns(5)
     with institution_col:
         institution_sel = st.selectbox("Institución", institutions, key="s_institucion")
@@ -373,7 +373,9 @@ def _render_buscador(df_index):
     hierarchy_values = []
     parent_rows = institution_rows
     for level, (column, level_col) in enumerate(zip(hierarchy_cols, level_cols)):
-        values = ["Todas"] + sorted(v for v in parent_rows[column].dropna().astype(str).str.strip().unique() if v)
+        values = ["Todas"] + utils.sort_classification_values(
+            v for v in parent_rows[column].dropna().astype(str).str.strip().unique() if v
+        )
         key = f"s_hierarchy_{level}"
         if key in st.session_state and st.session_state[key] not in values:
             st.session_state[key] = "Todas"

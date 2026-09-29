@@ -196,14 +196,14 @@ def main():
     title_text = {
         'macro': "Series Macro IIEP",
         'other': "🐫",
-        'map': "Mapa de datos",
+        'map': "Mapa de Datos",
     }.get(current_view, "Series Macro IIEP")
     if current_view == 'macro':
         primary_label, primary_target = "Daniel Heymann", 'other'
-        secondary_label, secondary_target = "Mapa de datos", 'map'
+        secondary_label, secondary_target = "Mapa de Datos", 'map'
     elif current_view == 'other':
         primary_label, primary_target = "Series Macro", 'macro'
-        secondary_label, secondary_target = "Mapa de datos", 'map'
+        secondary_label, secondary_target = "Mapa de Datos", 'map'
     else:
         primary_label, primary_target = "Daniel Heymann", 'other'
         secondary_label, secondary_target = "Series Macro", 'macro'
