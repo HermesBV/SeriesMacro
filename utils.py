@@ -32,6 +32,31 @@ CODED_METADATA_COLUMNS = {
     'ID', 'Código fuente', 'Nombre serie', 'Variable', 'Valoración', 'Descripción',
     'Frecuencia', 'Pestaña BD', 'Columna BD', 'Origen', 'Tema dataset', 'Estado', 'Fuente',
 }
+TOPICS = {
+    name.casefold(): name for name in (
+        'Actividad', 'Economía internacional', 'Finanzas públicas',
+        'Mercados financieros', 'Moneda y sistema financiero', 'Precios',
+        'Sector externo', 'Trabajo e ingresos',
+    )
+}
+TOPIC_ALIASES = {
+    'riesgo país': 'Mercados financieros',
+    'salarios': 'Trabajo e ingresos',
+    'tipo de cambio': 'Sector externo',
+    'trabajo': 'Trabajo e ingresos',
+}
+
+
+def normalize_topic(value):
+    name = ' '.join(str(value).split()).strip() if pd.notna(value) else ''
+    if not name or name.casefold() == 'sin clasificar':
+        return 'Sin clasificar'
+    key = name.casefold()
+    if key in TOPIC_ALIASES:
+        return TOPIC_ALIASES[key]
+    if key in TOPICS:
+        return TOPICS[key]
+    raise ValueError(f'Tema no reconocido: {name!r}. Revisar la taxonomía del inventario.')
 
 
 def _load_coded_metadata(excel_file):
@@ -65,9 +90,7 @@ def _load_coded_metadata(excel_file):
             df[column] = ''
     if 'Tema' not in df.columns:
         df['Tema'] = df['Tema dataset'].fillna('Sin clasificar').astype(str).str.strip()
-    df['Tema'] = df['Tema'].fillna('').astype(str).str.strip()
-    df.loc[df['Tema'].str.casefold().eq('tipo de cambio'), 'Tema'] = 'Sector externo'
-    df.loc[df['Tema'].eq(''), 'Tema'] = 'Sin clasificar'
+    df['Tema'] = df['Tema'].map(normalize_topic)
     df['Frecuencia código'] = df['Frecuencia'].astype(str).str.strip()
     df['Frecuencia'] = df['Frecuencia código'].map(frequency_names).fillna(df['Frecuencia código'])
     df = df.rename(columns={'Pestaña BD': 'Pestaña', 'Unidades': 'Unidad'})

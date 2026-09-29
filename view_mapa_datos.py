@@ -42,6 +42,11 @@ def hierarchy_nodes(df: pd.DataFrame) -> pd.DataFrame:
     prefix_counts: Counter[tuple[str, ...]] = Counter()
     columns = [df[level].map(_clean) if level in df else pd.Series("", index=df.index) for level in LEVELS]
     for values in zip(*columns):
+        # Estos textos son relleno del inventario, no niveles navegables.
+        values = tuple(
+            "" if level and value.casefold() in {"sin mayor detalle", "sin clasificar"} else value
+            for level, value in enumerate(values)
+        )
         path = []
         last_filled = max((i for i, value in enumerate(values) if value), default=-1)
         if last_filled < 0:
