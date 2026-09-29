@@ -339,7 +339,7 @@ def _render_botones_descarga(selected_rows_global, all_data_sheets):
         )
     with b_col4:
         st.download_button(
-            label="Descargar Base + Índice",
+            label="Descargar Base (Completa)",
             data=excel_full,
             file_name="SeriesMacro_base_e_indice.zip",
             mime="application/zip",
