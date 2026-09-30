@@ -88,6 +88,10 @@ def _load_coded_metadata(excel_file):
     for column in ['Área', 'Subárea 1', 'Subárea 2', 'Subárea 3']:
         if column not in df.columns:
             df[column] = ''
+    for column in ['Archivo origen', 'Grupo de hojas', 'Hoja origen',
+                   'Grupo de series 1', 'Grupo de series 2']:
+        if column not in df.columns:
+            df[column] = ''
     if 'Tema' not in df.columns:
         df['Tema'] = df['Tema dataset'].fillna('Sin clasificar').astype(str).str.strip()
     df['Tema'] = df['Tema'].map(normalize_topic)

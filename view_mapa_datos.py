@@ -179,6 +179,5 @@ def show(df: pd.DataFrame) -> None:
         counts = topic_counts(df)
         st.plotly_chart(_bubble_figure(counts), width="stretch", config={"displayModeBar": False})
     else:
-        st.caption("Instituciones y áreas visibles. Hacé clic en un área para desplegar sus subáreas.")
         nodes = hierarchy_nodes(df)
         st.html(_branch_html(nodes))

@@ -34,8 +34,8 @@ def plot_heymann_camel(df):
     plt.style.use('default') 
     
     fig, ax = plt.subplots(figsize=(12, 5.2)) 
-    fig.patch.set_facecolor('none')
-    ax.set_facecolor('none')
+    fig.patch.set_facecolor('white')
+    ax.set_facecolor('white')
 
     # Plot
     sns.kdeplot(df['Valor'], color='#4da6ff', fill=True, alpha=0.3, linewidth=2, ax=ax, label='Densidad')
@@ -72,7 +72,7 @@ def _heymann_chart_png(database_version):
         return None
     output = io.BytesIO()
     try:
-        fig.savefig(output, format="png", transparent=True, bbox_inches="tight")
+        fig.savefig(output, format="png", transparent=False, facecolor="white", bbox_inches="tight")
         return output.getvalue()
     finally:
         plt.close(fig)
