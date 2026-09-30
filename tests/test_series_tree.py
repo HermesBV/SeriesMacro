@@ -15,11 +15,11 @@ class SeriesTreeTests(unittest.TestCase):
             for sheet in ("Índices IPC Cobertura Nacional", "Variación mensual IPC Nacional")
         ])
         self.assertEqual(series_path(rows.iloc[0]), (
-            "INDEC", "Economía", "Precios", "IPC", "latest.xls", "IPC cobertura nacional",
+            "INDEC", "Economía", "Precios", "IPC", "IPC cobertura nacional",
             "Índices IPC Cobertura Nacional", "Región Cuyo",
         ))
         self.assertEqual(next_groups(rows, ("INDEC", "Economía", "Precios", "IPC")),
-                         [("latest.xls", 2)])
+                         [("IPC cobertura nacional", 2)])
         self.assertEqual(len(next_groups(rows, series_path(rows.iloc[0]))), 0)
 
     def test_navegacion_y_seleccion_en_streamlit(self):
@@ -42,9 +42,17 @@ class SeriesTreeTests(unittest.TestCase):
         page.button[0].click().run()  # Institución
         page.button[1].click().run()  # Área
         self.assertEqual(len(page.exception), 0)
-        self.assertIn("IPC", page.button[1].label)
-        page.button[1].click().run()  # Serie
+        self.assertEqual(len(page.button), 2)  # Ambas ramas siguen visibles.
+        self.assertIn("IPC", page.checkbox[0].label)
+        page.checkbox[0].set_value(True).run()
         self.assertEqual(page.session_state["selected_ids"], {"indec|ipc"})
+        page.button[1].click().run()  # Cerrar área sin cambiar la selección.
+        self.assertEqual(len(page.checkbox), 0)
+        self.assertEqual(page.session_state["selected_ids"], {"indec|ipc"})
+        page.button[1].click().run()
+        self.assertTrue(page.checkbox[0].value)
+        page.checkbox[0].set_value(False).run()
+        self.assertEqual(page.session_state["selected_ids"], set())
 
 
 if __name__ == "__main__":

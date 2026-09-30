@@ -398,6 +398,8 @@ def _render_buscador(df_index):
         f"Cantidad de series: {len(df_filtered_view):,} de {len(total_series):,}"
         .replace(",", ".")
     )
+    st.toggle("Ver Grilla/Agrupado", key="series_grouped_view",
+              help="Desactivado: grilla. Activado: árbol desplegable de series.")
     if st.session_state.get("series_grouped_view", False):
         series_tree.show(df_filtered_view)
         return
@@ -608,9 +610,6 @@ def _render_grafico(items):
 
 def show(df_index):
     """Vista Macro. Orden real: grafico, grilla de series, botones y buscador."""
-    st.toggle("Ver Grilla/Agrupado", key="series_grouped_view",
-              help="Desactivado: grilla. Activado: navegación por agrupamientos.")
-    st.caption("La lista de series está debajo del gráfico.")
     selected_rows_global = df_index[df_index["_Clave"].isin(st.session_state["selected_ids"])].copy()
     selected_sheets = tuple(selected_rows_global["Pestaña"].dropna().astype(str).unique())
     all_data_sheets = utils.load_data_sheets(selected_sheets)
