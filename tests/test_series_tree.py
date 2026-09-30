@@ -22,6 +22,27 @@ class SeriesTreeTests(unittest.TestCase):
                          [("IPC cobertura nacional", 2)])
         self.assertEqual(len(next_groups(rows, series_path(rows.iloc[0]))), 0)
 
+    def test_hojas_tecnicas_usan_etiquetas_conceptuales(self):
+        rows = pd.DataFrame([
+            {"Institución": "INDEC", "Código fuente": "indec-cin",
+             "Grupo de hojas": "Balanza de pagos", "Hoja origen": "Cuadro 14",
+             "Título dataset": "Cuadro 14: Detalle de balanza de pagos por componentes"},
+            {"Institución": "INDEC", "Código fuente": "datos.gob.ar",
+             "Subárea 2": "Índice de Precios Internos al por Mayor",
+             "Hoja origen": "4.11", "Título dataset": "Índice de Precios Internos al por Mayor"},
+            {"Institución": "BCRA", "Código fuente": "bcra-pas",
+             "Grupo de hojas": "Depósitos por estrato de monto",
+             "Hoja origen": "Estra_dia_bcos.priv"},
+            {"Institución": "INDEC", "Código fuente": "indec-pib",
+             "Grupo de hojas": "Oferta y demanda globales", "Hoja origen": "cuadro 1",
+             "Título dataset": "Oferta y demanda globales. Valores trimestrales a precios de 2004"},
+        ])
+        self.assertEqual(series_path(rows.iloc[0])[-1],
+                         "Detalle de balanza de pagos por componentes")
+        self.assertNotIn("4.11", series_path(rows.iloc[1]))
+        self.assertEqual(series_path(rows.iloc[2])[-1], "Bancos privados")
+        self.assertEqual(series_path(rows.iloc[3])[-1], "Valores trimestrales a precios de 2004")
+
     def test_navegacion_y_seleccion_en_streamlit(self):
         from streamlit.testing.v1 import AppTest
 
@@ -35,7 +56,7 @@ class SeriesTreeTests(unittest.TestCase):
             series_tree.show(pd.DataFrame([{
                 "Instituci\u00f3n": "INDEC", "\u00c1rea": "Precios", "_Clave": "indec|ipc",
                 "Nombre serie": "IPC", "Frecuencia": "Mensual", "Unidad": "\u00cdndice", "ID": "ipc",
-            }]))
+            }]), ("synthetic",))
 
         page = AppTest.from_function(app, default_timeout=15).run()
         self.assertEqual(len(page.exception), 0)
@@ -51,6 +72,10 @@ class SeriesTreeTests(unittest.TestCase):
         self.assertEqual(page.session_state["selected_ids"], {"indec|ipc"})
         page.button[1].click().run()
         self.assertTrue(page.checkbox[0].value)
+        page.session_state["selected_ids"] = set()  # Cambio desde la grilla.
+        page.run()
+        self.assertFalse(page.checkbox[0].value)
+        page.checkbox[0].set_value(True).run()
         page.checkbox[0].set_value(False).run()
         self.assertEqual(page.session_state["selected_ids"], set())
 

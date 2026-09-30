@@ -401,7 +401,9 @@ def _render_buscador(df_index):
     st.toggle("Ver Grilla/Agrupado", key="series_grouped_view",
               help="Desactivado: grilla. Activado: árbol desplegable de series.")
     if st.session_state.get("series_grouped_view", False):
-        series_tree.show(df_filtered_view)
+        tree_key = (search_text, institution_sel, tuple(hierarchy_values),
+                    tema_sel, freq_sel, valuation_sel, utils._database_version())
+        series_tree.show(df_filtered_view, tree_key)
         return
     df_filtered_view["Seleccionar"] = df_filtered_view["_Clave"].isin(st.session_state["selected_ids"])
     df_filtered_view["Fuente_Label"] = df_filtered_view["Fuente"].apply(
