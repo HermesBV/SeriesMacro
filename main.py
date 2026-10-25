@@ -6,6 +6,7 @@ import utils
 import view_macro
 import view_heymann
 import view_mapa_datos
+import view_iiep
 
 try:
     locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
@@ -130,7 +131,8 @@ def main():
 
         /* REGLA ESPECÍFICA BOTÓN DEL ENCABEZADO */
         div[data-testid="stHorizontalBlock"]:nth-of-type(1) div[data-testid="column"]:nth-of-type(3) button p,
-        div[data-testid="stHorizontalBlock"]:nth-of-type(1) div[data-testid="column"]:nth-of-type(4) button p {{
+        div[data-testid="stHorizontalBlock"]:nth-of-type(1) div[data-testid="column"]:nth-of-type(4) button p,
+        div[data-testid="stHorizontalBlock"]:nth-of-type(1) div[data-testid="column"]:nth-of-type(5) button p {{
             font-size: 1.08rem !important; font-weight: 600 !important;
         }}
         
@@ -197,19 +199,21 @@ def main():
         'macro': "Series Macro IIEP",
         'other': "🐫",
         'map': "Mapa de Datos",
+        'iiep': "Indicadores IIEP",
     }.get(current_view, "Series Macro IIEP")
-    if current_view == 'macro':
-        primary_label, primary_target = "Daniel Heymann", 'other'
-        secondary_label, secondary_target = "Mapa de Datos", 'map'
-    elif current_view == 'other':
-        primary_label, primary_target = "Series Macro", 'macro'
-        secondary_label, secondary_target = "Mapa de Datos", 'map'
-    else:
-        primary_label, primary_target = "Daniel Heymann", 'other'
-        secondary_label, secondary_target = "Series Macro", 'macro'
-    
-    try: c_logo, c_title, c_primary, c_secondary = st.columns([1.2, 6.2, 1.6, 1.6], gap="medium", vertical_alignment="center")
-    except TypeError: c_logo, c_title, c_primary, c_secondary = st.columns([1.2, 6.2, 1.6, 1.6], gap="medium")
+    nav_labels = {
+        'macro': "Series Macro", 'iiep': "Indicadores IIEP",
+        'other': "Daniel Heymann", 'map': "Mapa de Datos",
+    }
+    nav_targets = [
+        target for target in nav_labels
+        if target != current_view and (target != 'other' or has_heymann_data)
+    ]
+
+    widths = [1.2, 9.4 - 1.6 * len(nav_targets)] + [1.6] * len(nav_targets)
+    try: header_columns = st.columns(widths, gap="medium", vertical_alignment="center")
+    except TypeError: header_columns = st.columns(widths, gap="medium")
+    c_logo, c_title, nav_columns = header_columns[0], header_columns[1], header_columns[2:]
 
     with c_logo:
         if logo_b64:
@@ -225,19 +229,18 @@ def main():
             )
 
     with c_title: st.markdown(f'<div class="custom-header-title">{title_text}</div>', unsafe_allow_html=True)
-    with c_primary:
-        if (primary_target != 'other' or has_heymann_data) and st.button(primary_label, width="stretch"):
-            st.session_state['view'] = primary_target
-            st.rerun()
-    with c_secondary:
-        if st.button(secondary_label, width="stretch"):
-            st.session_state['view'] = secondary_target
-            st.rerun()
+    for column, target in zip(nav_columns, nav_targets):
+        with column:
+            if st.button(nav_labels[target], width="stretch", key=f"nav_{target}"):
+                st.session_state['view'] = target
+                st.rerun()
 
     if st.session_state['view'] == 'other':
         view_heymann.show(utils.load_heymann_data())
     elif st.session_state['view'] == 'map':
         view_mapa_datos.show(df_index)
+    elif st.session_state['view'] == 'iiep':
+        view_iiep.show(df_index)
     else:
         view_macro.show(df_index)
 

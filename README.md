@@ -30,6 +30,8 @@ El buscador muestra `Título`, `Detalle`, `Unidad`, `Valoración`, frecuencia, `
 
 Los campos descriptivos y de procedencia que también conserva cada registro son `ID`, `Código fuente`, `Variable`, `Descripción`, `Pestaña BD`, `Columna BD`, `Archivo origen`, `Hoja origen`, `Origen`, `Fuente`, `Catálogo ID`, `Dataset ID`, `Distribución ID`, `Título dataset`, `Tema dataset`, `Responsable dataset`, `Fuente de valores` y `Estado`.
 
+La vista **Indicadores IIEP** presenta en mosaico los grupos de series elaborados por investigadores del IIEP; cada tarjeta muestra el título y, en pequeño, los autores. Al abrir un grupo se ven su descripción, el gráfico de las series elegidas (por defecto, las destacadas), el último dato con el valor de un año antes, el detalle de cada serie, la descarga de datos y los anexos. Los grupos se definen en `GRUPOS` de `view_iiep.py` por código fuente o por (`Código fuente`, `ID`); hoy son «Reservas Internacionales de la Argentina» (código `iiep-rin`, con la metodología en `anexos/IIEP/`) e «ITCRB Estados Unidos (1958 - Actualidad)». Esas series también aparecen en el buscador general con institución IIEP.
+
 La base publicada contiene únicamente series graficables. Las fuentes documentales se incorporarán más adelante con un esquema específico. La vista Daniel Heymann se alimenta de la serie mensual histórica del IIEP: usa `Importación (implícito)` reescalada antes de enero de 1997 y el promedio mensual oficial `ITCRB Estados Unidos` del BCRA desde esa fecha. SeriesMacro la localiza por su ID estable en `Codificacion`.
 
 Las series de Hacienda están temporalmente excluidas de la búsqueda hasta que se reemplace su scraper.
