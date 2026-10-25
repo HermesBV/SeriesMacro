@@ -35,3 +35,7 @@ La vista **Indicadores IIEP** presenta en mosaico los grupos de series elaborado
 La base publicada contiene únicamente series graficables. Las fuentes documentales se incorporarán más adelante con un esquema específico. La vista Daniel Heymann se alimenta de la serie mensual histórica del IIEP: usa `Importación (implícito)` reescalada antes de enero de 1997 y el promedio mensual oficial `ITCRB Estados Unidos` del BCRA desde esa fecha. SeriesMacro la localiza por su ID estable en `Codificacion`.
 
 Las series de Hacienda están temporalmente excluidas de la búsqueda hasta que se reemplace su scraper.
+
+## Pendientes de limpieza
+
+- `estetica/DH.png` no está referenciado por el código. Se conserva por decisión del usuario; puede borrarse más adelante si se confirma que no hace falta.
