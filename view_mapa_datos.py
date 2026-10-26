@@ -5,17 +5,15 @@ from __future__ import annotations
 from collections import Counter
 from html import escape
 import math
-import textwrap
 
 import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
 
 
 LEVELS = ("Institución", "Área", "Subárea 1", "Subárea 2", "Subárea 3")
 COLORS = (
-    "#0B6E69", "#F05F30", "#3774AC", "#6E52A3", "#B95B78",
-    "#BF8B2A", "#2D8A55", "#8A5A44", "#4D6F91", "#66757F",
+    "#0B6E69", "#C2410C", "#3774AC", "#6E52A3", "#A3445F",
+    "#9A6B12", "#237347", "#8A5A44", "#4D6F91", "#66757F",
 )
 NODE_SEP = "\x1f"
 
@@ -63,35 +61,51 @@ def hierarchy_nodes(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
-def _bubble_figure(counts: pd.DataFrame) -> go.Figure:
-    count = len(counts)
-    columns = 4 if count >= 8 else 3 if count >= 5 else min(count, 2)
-    rows = max(1, math.ceil(count / columns))
-    max_count = int(counts["Series"].max())
-    fig = go.Figure()
-    for number, item in counts.iterrows():
-        x, y = number % columns, -(number // columns)
-        diameter = 112 + 92 * math.sqrt(int(item["Series"]) / max_count)
-        wrapped = "<br>".join(textwrap.wrap(str(item["Tema"]), width=17, break_long_words=False))
-        fig.add_trace(go.Scatter(
-            x=[x], y=[y], mode="markers+text",
-            marker={"size": diameter,
-                    "color": "#7B858B" if str(item["Tema"]).casefold() == "sin clasificar" else COLORS[number % len(COLORS)],
-                    "line": {"color": "#FFFFFF", "width": 3}, "opacity": 0.94},
-            text=[f"<b>{wrapped}</b><br>{int(item['Series']):,} series"],
-            textposition="middle center", textfont={"color": "#FFFFFF", "size": 12},
-            customdata=[[str(item["Tema"]), int(item["Series"])]],
-            hovertemplate="%{customdata[0]}<br>%{customdata[1]:,} series<extra></extra>",
-            showlegend=False,
-        ))
-    fig.update_layout(
-        height=max(420, rows * 245), margin={"l": 24, "r": 24, "t": 20, "b": 20},
-        paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF", hoverlabel={"bgcolor": "#FFFFFF"},
-        xaxis={"visible": False, "range": [-0.5, columns - 0.5], "fixedrange": True},
-        yaxis={"visible": False, "range": [-rows + 0.5, 0.5], "fixedrange": True},
-        dragmode=False,
-    )
-    return fig
+def _bubble_html(counts: pd.DataFrame) -> str:
+    """Burbujas por tema en una grilla que se adapta al ancho de la pantalla.
+
+    El diámetro es proporcional a la raíz de la cantidad de series y se expresa como
+    fracción de la celda, de modo que las burbujas nunca se pisan en pantallas angostas.
+    """
+    max_count = max(int(counts["Series"].max()), 1)
+    bubbles = []
+    for number, item in counts.reset_index(drop=True).iterrows():
+        series = int(item["Series"])
+        scale = 0.58 + 0.42 * math.sqrt(series / max_count)
+        color = "#5F6B73" if str(item["Tema"]).casefold() == "sin clasificar" else COLORS[number % len(COLORS)]
+        theme = escape(str(item["Tema"]))
+        amount = f"{series:,}".replace(",", ".")
+        bubbles.append(
+            f'<div class="topic-cell"><div class="topic-bubble" style="--scale:{scale:.3f};--color:{color}" '
+            f'title="{theme}: {amount} series"><span class="topic-name">{theme}</span>'
+            f'<span class="topic-count">{amount} series</span></div></div>'
+        )
+    return """<style>
+    .topic-bubbles {
+        display: flex; flex-wrap: wrap; justify-content: center;
+        gap: 12px; padding: 8px 0 24px; max-width: 1040px; margin: 0 auto;
+    }
+    .topic-cell {
+        display: flex; align-items: center; justify-content: center; aspect-ratio: 1;
+        flex: 0 0 calc((100% - 36px) / 4);
+    }
+    .topic-bubble {
+        width: calc(var(--scale) * 100%); aspect-ratio: 1; border-radius: 50%;
+        background: var(--color); color: #fff; box-shadow: 0 0 0 3px #fff, 0 2px 8px rgba(0,0,0,0.12);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; padding: 8%; box-sizing: border-box; line-height: 1.2;
+    }
+    .topic-name {font-weight: 700; font-size: clamp(13px, 1.2vw, 16px); overflow-wrap: anywhere;}
+    .topic-count {font-size: clamp(12px, 1.05vw, 15px); font-weight: 500; margin-top: 4px;}
+    @media (max-width: 900px) {
+        .topic-cell {flex-basis: calc((100% - 24px) / 3);}
+        .topic-name {font-size: 13px;} .topic-count {font-size: 12px;}
+    }
+    @media (max-width: 560px) {
+        .topic-bubbles {gap: 8px;} .topic-cell {flex-basis: calc((100% - 8px) / 2);}
+        .topic-name {font-size: 12px;} .topic-count {font-size: 12px;}
+    }
+    </style><div class="topic-bubbles">""" + "".join(bubbles) + "</div>"
 
 
 def _branch_html(nodes: pd.DataFrame) -> str:
@@ -177,7 +191,7 @@ def show(df: pd.DataFrame) -> None:
     st.caption(f"{len(df):,} series disponibles".replace(",", "."))
     if not by_institution:
         counts = topic_counts(df)
-        st.plotly_chart(_bubble_figure(counts), width="stretch", config={"displayModeBar": False})
+        st.html(_bubble_html(counts))
     else:
         nodes = hierarchy_nodes(df)
         st.html(_branch_html(nodes))

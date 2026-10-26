@@ -340,7 +340,8 @@ def _render_buscador(df_index):
     edited_df = st.data_editor(
         df_filtered_view,
         column_config={
-            "Seleccionar": st.column_config.CheckboxColumn("Seleccionar", default=False, width="small"),
+            "Seleccionar": st.column_config.CheckboxColumn(
+                "✓", help="Marcar para graficar", default=False, width="small"),
             "Nombre serie": st.column_config.TextColumn("Título", width="medium"),
             "Detalle": st.column_config.TextColumn("Detalle", width="large"),
             "Unidad": st.column_config.TextColumn("Unidad", width="medium"),
@@ -542,7 +543,7 @@ def show(df_index):
     all_data_sheets = utils.load_data_sheets(selected_sheets)
 
     if selected_rows_global.empty:
-        st.info("Selecciona series en el buscador de abajo para graficar")
+        st.info("Seleccioná series en el buscador de abajo para graficar.")
     else:
         st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
         items = _construir_items_series(selected_rows_global, all_data_sheets)
