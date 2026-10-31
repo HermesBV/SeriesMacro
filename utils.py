@@ -12,6 +12,10 @@ LOGO_PATH = 'estetica/logo-iiep-macro.png'
 SOURCE_HEYMANN = "iiep"
 ID_HEYMANN = "itcrb-eeuu-empalmado-importacion-m"
 SHEET_HEYMANN = "IIEP ITCRB EEUU M"
+# Excel de coyuntura que actualiza SeriesScraper (coyuntura/actualizador); se
+# descarga escribiendo la clave en el buscador de Series Macro.
+COYUNTURA_PATH = 'coyuntura/coyuntura iiep reemplazar.xlsx'
+CLAVE_COYUNTURA = 'abrete sesamo'
 
 # --- CONFIGURACIÓN DE COLORES (NUEVA PALETA) ---
 COLOR_FONDO_PAGINA = "#FFFFFF"     
@@ -266,6 +270,33 @@ def _load_heymann_data(database_version):
 
 def load_heymann_data():
     return _load_heymann_data(_database_version())
+
+def pide_coyuntura(texto):
+    """True si el buscador recibió la clave «abrete sesamo» (sin importar tildes ni mayúsculas)."""
+    import unicodedata
+    plano = unicodedata.normalize('NFKD', str(texto or '')).encode('ascii', 'ignore').decode()
+    return ' '.join(plano.casefold().split()) == CLAVE_COYUNTURA
+
+
+def _coyuntura_version():
+    try:
+        estado = os.stat(COYUNTURA_PATH)
+    except OSError:
+        return None
+    return estado.st_mtime_ns, estado.st_size
+
+
+@st.cache_data
+def _load_coyuntura(version):
+    with open(COYUNTURA_PATH, 'rb') as archivo:
+        return archivo.read()
+
+
+def load_coyuntura():
+    """Bytes del último Excel de coyuntura publicado, o None si no está en el repositorio."""
+    version = _coyuntura_version()
+    return _load_coyuntura(version) if version else None
+
 
 def get_full_database_archive():
     output = io.BytesIO()

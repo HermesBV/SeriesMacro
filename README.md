@@ -38,6 +38,10 @@ La base publicada contiene únicamente series graficables. Las fuentes documenta
 
 Las series de Hacienda están temporalmente excluidas de la búsqueda hasta que se reemplace su scraper.
 
+## Excel de coyuntura
+
+`coyuntura/coyuntura iiep reemplazar.xlsx` es el libro del informe de coyuntura que actualiza SeriesScraper (`python -m coyuntura.actualizador` lo copia acá). No tiene enlace visible: en Series Macro, escribir «abrete sesamo» en el buscador y pulsar Enter muestra el botón **Descargar Excel de coyuntura** (`utils.pide_coyuntura` ignora tildes, mayúsculas y espacios). Si el archivo no está, se avisa que todavía no se publicó.
+
 ## Pendientes de limpieza
 
 - `estetica/DH.png` no está referenciado por el código. Se conserva por decisión del usuario; puede borrarse más adelante si se confirma que no hace falta.

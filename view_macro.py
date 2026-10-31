@@ -1,4 +1,5 @@
 # VIEW_MACRO_RESET_V15: botones macro en una linea con fuente pareja y mas legible. Solo view_macro.
+import os
 import re
 import streamlit as st
 import pandas as pd
@@ -273,6 +274,20 @@ def _render_botones_descarga(selected_rows_global, all_data_sheets):
         )
 
 
+def _render_descarga_coyuntura():
+    """Atajo del buscador: la clave «abrete sesamo» ofrece el Excel de coyuntura vigente."""
+    contenido = utils.load_coyuntura()
+    if contenido is None:
+        st.warning("El Excel de coyuntura todavía no está publicado en esta instancia.")
+        return
+    st.download_button(
+        "Descargar Excel de coyuntura", data=contenido,
+        file_name=os.path.basename(utils.COYUNTURA_PATH),
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        key="descarga_coyuntura",
+    )
+
+
 def _render_buscador(df_index):
     """Buscador inferior y sincronizacion de seleccion."""
     st.markdown("### Buscador General")
@@ -280,6 +295,8 @@ def _render_buscador(df_index):
 
     with col1:
         search_text = st.text_input("Buscar", placeholder="ej. PIB, Argentina...", key="s_text")
+        if utils.pide_coyuntura(search_text):
+            _render_descarga_coyuntura()
     with col2:
         temas = ["Todos"] + utils.sort_classification_values(df_index["Tema"].dropna().astype(str).unique())
         tema_sel = st.selectbox("Tema", temas, key="s_tema")
