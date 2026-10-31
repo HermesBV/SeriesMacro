@@ -40,7 +40,9 @@ Las series de Hacienda están temporalmente excluidas de la búsqueda hasta que 
 
 ## Excel de coyuntura
 
-`coyuntura/coyuntura iiep reemplazar.xlsx` es el libro del informe de coyuntura que actualiza SeriesScraper (`python -m coyuntura.actualizador` lo copia acá). No tiene enlace visible: en Series Macro, escribir «abrete sesamo» en el buscador y pulsar Enter muestra el botón **Descargar Excel de coyuntura** (`utils.pide_coyuntura` ignora tildes, mayúsculas y espacios). Si el archivo no está, se avisa que todavía no se publicó.
+`coyuntura/coyuntura iiep reemplazar.xlsx` es el libro del informe de coyuntura que actualiza SeriesScraper (`python -m coyuntura.actualizador` lo copia acá). No tiene enlace visible: en Series Macro, escribir «abrete sesamo» en el buscador y pulsar Enter muestra el botón **Descargar Excel de coyuntura** (`utils.pide_coyuntura` ignora tildes, mayúsculas y espacios). Si el archivo no está en el repositorio, la app lo descarga de `COYUNTURA_URL` (con `COYUNTURA_TOKEN` como Bearer si hace falta) definidos en `.streamlit/secrets.toml`, lo que permite servirlo sin versionarlo en un repositorio público; si tampoco está configurado, avisa que todavía no se publicó.
+
+Las series del IMIG propio (`mecon-imig`) se publican; el resto de Hacienda sigue oculto hasta que se reemplace su scraper.
 
 ## Pendientes de limpieza
 

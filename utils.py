@@ -176,7 +176,7 @@ def _only_chartable_series(df, excel_file):
         | (catalog_id.eq('sspm') & dataset_id.eq('452'))
         | dataset_title.str.contains('informe mensual de ingresos y gastos del sector público nacional no financiero', regex=False)
         | owner.str.contains('secretaría de hacienda', regex=False)
-    )
+    ) & ~source_code.eq('mecon-imig')  # el IMIG propio (scraper_MECON_imig) sí se publica
     return chartable.loc[~paused_hacienda].copy()
 
 
@@ -292,10 +292,35 @@ def _load_coyuntura(version):
         return archivo.read()
 
 
+@st.cache_data(ttl=3600)
+def _download_coyuntura(url, token):
+    """Descarga el Excel desde una ubicación privada (secrets); None si falla."""
+    import requests
+    headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/octet-stream'} if token else {}
+    try:
+        respuesta = requests.get(url, headers=headers, timeout=60)
+        respuesta.raise_for_status()
+    except requests.RequestException:
+        return None
+    return respuesta.content
+
+
 def load_coyuntura():
-    """Bytes del último Excel de coyuntura publicado, o None si no está en el repositorio."""
+    """Bytes del último Excel de coyuntura.
+
+    Primero el archivo del repositorio; si no está, la URL privada configurada
+    en secrets (COYUNTURA_URL y, opcionalmente, COYUNTURA_TOKEN), para servirlo
+    sin versionarlo en un repositorio público.
+    """
     version = _coyuntura_version()
-    return _load_coyuntura(version) if version else None
+    if version:
+        return _load_coyuntura(version)
+    try:
+        url = st.secrets.get('COYUNTURA_URL')
+        token = st.secrets.get('COYUNTURA_TOKEN', '')
+    except Exception:
+        return None
+    return _download_coyuntura(url, token) if url else None
 
 
 def get_full_database_archive():
