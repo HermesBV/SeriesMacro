@@ -1,4 +1,5 @@
 # VIEW_MACRO_RESET_V15: botones macro en una linea con fuente pareja y mas legible. Solo view_macro.
+import html
 import os
 import re
 import streamlit as st
@@ -97,24 +98,24 @@ def _render_controles_series(series_metadata):
             height: 0.16rem;
         }
         /* Controles de la grilla: mas chicos que el nombre de la serie. */
-        div[data-baseweb="select"] span,
-        div[data-baseweb="select"] div {
+        .st-key-grilla_series div[data-baseweb="select"] span,
+        .st-key-grilla_series div[data-baseweb="select"] div {
             font-size: 0.76rem !important;
         }
-        div[data-baseweb="select"] > div {
+        .st-key-grilla_series div[data-baseweb="select"] > div {
             min-height: 31px !important;
         }
-        div[data-testid="stCheckbox"] label,
-        div[data-testid="stCheckbox"] p {
+        .st-key-grilla_series div[data-testid="stCheckbox"] label,
+        .st-key-grilla_series div[data-testid="stCheckbox"] p {
             font-size: 0.76rem !important;
         }
         /* Color picker compacto para que no domine la fila. */
-        div[data-testid="stColorPicker"] {
+        .st-key-grilla_series div[data-testid="stColorPicker"] {
             padding-top: 0px !important;
             transform: scale(0.84);
             transform-origin: left center;
         }
-        div[data-testid="stColorPicker"] button {
+        .st-key-grilla_series div[data-testid="stColorPicker"] button {
             min-height: 26px !important;
             height: 26px !important;
             width: 26px !important;
@@ -151,7 +152,7 @@ def _render_controles_series(series_metadata):
         c_serie, c_tipo, c_eje, c_color, c_visible = st.columns([6.0, 1.15, 1.15, 0.75, 0.85], gap="small")
 
         with c_serie:
-            st.markdown(f'<div class="series-grid-name" title="{serie_txt}">{serie_txt}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="series-grid-name" title="{html.escape(serie_txt, quote=True)}">{html.escape(serie_txt)}</div>', unsafe_allow_html=True)
 
         with c_tipo:
             try:
@@ -220,19 +221,19 @@ def _render_botones_descarga(selected_rows_global, all_data_sheets):
         """
         <style>
         /* Botones de accion/descarga de Macro: texto en una sola linea, fuente pareja y legible. */
-        div[data-testid="stDownloadButton"] button,
-        div[data-testid="stButton"] button {
+        .st-key-descargas_macro div[data-testid="stDownloadButton"] button,
+        .st-key-descargas_macro div[data-testid="stButton"] button {
             padding-left: 0.38rem !important;
             padding-right: 0.38rem !important;
             min-height: 2.35rem !important;
             white-space: nowrap !important;
         }
-        div[data-testid="stDownloadButton"] button p,
-        div[data-testid="stDownloadButton"] button span,
-        div[data-testid="stDownloadButton"] button div,
-        div[data-testid="stButton"] button p,
-        div[data-testid="stButton"] button span,
-        div[data-testid="stButton"] button div {
+        .st-key-descargas_macro div[data-testid="stDownloadButton"] button p,
+        .st-key-descargas_macro div[data-testid="stDownloadButton"] button span,
+        .st-key-descargas_macro div[data-testid="stDownloadButton"] button div,
+        .st-key-descargas_macro div[data-testid="stButton"] button p,
+        .st-key-descargas_macro div[data-testid="stButton"] button span,
+        .st-key-descargas_macro div[data-testid="stButton"] button div {
             font-size: 0.82rem !important;
             line-height: 1.08 !important;
             white-space: nowrap !important;
@@ -247,14 +248,7 @@ def _render_botones_descarga(selected_rows_global, all_data_sheets):
     excel_filtered = utils.convert_df_to_excel_filtered(selected_rows_global, all_data_sheets)
     excel_full = utils.get_full_database_archive()
 
-    b_col1, b_void, b_col3, b_col4 = st.columns([1.9, 2.7, 2.7, 2.7], gap="small")
-
-    with b_col1:
-        if st.button("Limpiar filtros", width="stretch"):
-            for k in ["s_text", "s_institucion", "s_area", "s_tema", "s_freq", "s_valoracion", "s_hierarchy_0", "s_hierarchy_1", "s_hierarchy_2", "s_hierarchy_3"]:
-                if k in st.session_state:
-                    del st.session_state[k]
-            st.rerun()
+    b_void, b_col3, b_col4 = st.columns([4.6, 2.7, 2.7], gap="small")
 
     with b_col3:
         st.download_button(
@@ -335,11 +329,19 @@ def _render_buscador(df_index):
     df_filtered_view = utils.filter_data(
         df_index, search_text, institution_sel, hierarchy_values, tema_sel, freq_sel, valuation_sel
     )
-    total_series = utils.filter_data(df_index, "", "Todas", ["Todas"] * 4, "Todos", "Todas")
-    st.caption(
-        f"Cantidad de series: {len(df_filtered_view):,} de {len(total_series):,}"
-        .replace(",", ".")
-    )
+    c_cantidad, c_limpiar = st.columns([4, 1])
+    with c_cantidad:
+        st.caption(
+            f"Cantidad de series: {len(df_filtered_view):,} de {len(df_index):,}"
+            .replace(",", ".")
+        )
+    with c_limpiar:
+        # Siempre a mano, también sin series elegidas.
+        if st.button("Limpiar filtros", width="stretch"):
+            for k in ["s_text", "s_institucion", "s_tema", "s_freq", "s_valoracion",
+                      "s_hierarchy_0", "s_hierarchy_1", "s_hierarchy_2", "s_hierarchy_3"]:
+                st.session_state.pop(k, None)
+            st.rerun()
     st.toggle("Ver Grilla/Agrupado", key="series_grouped_view",
               help="Desactivado: grilla. Activado: árbol desplegable de series.")
     if st.session_state.get("series_grouped_view", False):
@@ -348,9 +350,12 @@ def _render_buscador(df_index):
         series_tree.show(df_filtered_view, tree_key)
         return
     df_filtered_view["Seleccionar"] = df_filtered_view["_Clave"].isin(st.session_state["selected_ids"])
-    df_filtered_view["Fuente_Label"] = df_filtered_view["Fuente"].apply(
-        lambda x: "MECON" if str(x).startswith("https://www.economia.gob.ar") else x
-    )
+    # Al navegador sólo van las columnas visibles (el índice tiene 38).
+    visibles = ["Seleccionar", "Nombre serie", "Detalle", "Unidad", "Valoración", "Frecuencia",
+                "Desde", "Hasta", "Tema", "Institución", "Área", "Subárea 1", "Subárea 2", "Subárea 3"]
+    df_filtered_view = df_filtered_view[[c for c in visibles if c in df_filtered_view.columns] + ["_Clave"]].copy()
+    if "Unidad" in df_filtered_view.columns:
+        df_filtered_view["Unidad"] = df_filtered_view["Unidad"].fillna("")
 
     stable_key = f"editor_v5_{search_text}_{institution_sel}_{hierarchy_values}_{tema_sel}_{freq_sel}_{valuation_sel}"
 
@@ -565,8 +570,10 @@ def show(df_index):
         st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
         items = _construir_items_series(selected_rows_global, all_data_sheets)
         _render_grafico(items)
-        _render_controles_series([{k: v for k, v in item.items() if k != "serie"} for item in items])
-        _render_botones_descarga(selected_rows_global, all_data_sheets)
+        with st.container(key="grilla_series"):
+            _render_controles_series([{k: v for k, v in item.items() if k != "serie"} for item in items])
+        with st.container(key="descargas_macro"):
+            _render_botones_descarga(selected_rows_global, all_data_sheets)
 
     st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
     _render_buscador(df_index)

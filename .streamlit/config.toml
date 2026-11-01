@@ -1,3 +1,7 @@
 [theme]
 base="light"
 primaryColor="#049c82"
+
+[client]
+# Sin menú de desarrollador: la tecla «c» abría «Clear caches» y la próxima carga tardaba ~50 s.
+toolbarMode = "viewer"

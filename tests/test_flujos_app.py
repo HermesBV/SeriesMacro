@@ -65,5 +65,15 @@ class FlujosIndicadoresIIEPTests(unittest.TestCase):
         self.assertNotIn("grupo", prueba.query_params)
 
 
+@unittest.skipUnless(os.path.exists(os.path.join(RAIZ, "bds", "BD.xlsx")), "falta la base publicada")
+class BuscadorMacroTests(unittest.TestCase):
+    def test_busqueda_con_parentesis_es_literal(self):
+        # «PIB (» era una expresión regular inválida y tumbaba la vista.
+        prueba = app()
+        next(t for t in prueba.text_input if t.key == "s_text").set_value("PIB (").run()
+        self.assertFalse(prueba.exception)
+        self.assertTrue(any(b.label == "Limpiar filtros" for b in prueba.button))
+
+
 if __name__ == "__main__":
     unittest.main()

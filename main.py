@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import locale
 from PIL import Image
 import os
@@ -25,6 +26,26 @@ if os.path.exists(utils.LOGO_PATH):
 st.set_page_config(layout="wide", page_title="Series Macro IIEP", page_icon=page_icon)
 
 VIEWS = ('macro', 'iiep', 'other', 'map')
+
+
+def _soltar_foco_al_clickear():
+    """Un botón clickeado conserva el foco; al teclear después cualquier letra el
+    navegador lo pasa a :focus-visible y Streamlit dibuja su anillo (un rectángulo
+    gris verdoso que no se va hasta cambiar de ventana). Se suelta el foco sólo
+    en clics de mouse: con Enter o Espacio (detail == 0) el anillo sigue
+    marcando dónde está quien navega con teclado."""
+    with st.container(key="js_foco"):
+        components.html("""<script>
+        const d = window.parent.document;
+        if (!d.__soltarFoco) {
+          d.__soltarFoco = true;
+          d.addEventListener('click', (e) => {
+            if (e.detail === 0) return;
+            const el = e.target.closest('button, summary, a[href], [role="tab"]');
+            if (el && !el.closest('[data-testid="stColorPicker"]')) setTimeout(() => el.blur(), 0);
+          }, true);
+        }
+        </script>""", height=0)
 
 
 def main():
@@ -223,13 +244,14 @@ def main():
             text-decoration: none;
         }}
         .footer a:hover {{ text-decoration: underline; }}
+        .st-key-js_foco {{ display: none; }}
         </style>
     """, unsafe_allow_html=True)
+    _soltar_foco_al_clickear()
 
     df_index = utils.load_metadata()
     if df_index is None:
         return
-    sheet_names = utils.load_sheet_names()
     has_heymann_data = (
         df_index['Código fuente'].astype(str).eq(utils.SOURCE_HEYMANN)
         & df_index['ID'].astype(str).eq(utils.ID_HEYMANN)

@@ -21,10 +21,7 @@ CLAVE_COYUNTURA = 'abrete sesamo'
 COLOR_FONDO_PAGINA = "#FFFFFF"     
 COLOR_BANNER_SUPERIOR = "#FFFFFF"  
 COLOR_TEXTO_PRINCIPAL = "#000000"  
-COLOR_BOTONES_ACTIVO = "#f05f30"   
 COLOR_SLIDER_BORDE = "#049c82"     
-COLOR_BOTONES_RANGO_FONDO = "#FFFFFF"
-COLOR_BOTONES_RANGO_TEXTO = "#000000"
 
 # Paleta Principal: Naranja, Verde, Azul, Rojo, Amarillo
 PALETA_COLORES = [
@@ -188,7 +185,12 @@ def get_base64_image(image_path):
 
 
 def _database_version():
-    """Devuelve una huella barata que cambia cuando se reemplaza la base."""
+    """Devuelve una huella barata que cambia cuando se reemplaza la base.
+
+    Sin base o índice devuelve None y ``_load_metadata`` muestra el error.
+    """
+    if not (os.path.exists(FILE_PATH) and os.path.exists(INDEX_PATH)):
+        return None
     data_stat = os.stat(FILE_PATH)
     index_stat = os.stat(INDEX_PATH)
     return data_stat.st_mtime_ns, data_stat.st_size, index_stat.st_mtime_ns, index_stat.st_size
@@ -293,16 +295,22 @@ def _load_coyuntura(version):
 
 
 @st.cache_data(ttl=3600)
-def _download_coyuntura(url, token):
-    """Descarga el Excel desde una ubicación privada (secrets); None si falla."""
+def _download_coyuntura_cacheado(url, token):
+    """Descarga el Excel desde una ubicación privada (secrets). Un error se
+    propaga para que no quede cacheado una hora como «sin archivo»."""
     import requests
     headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/octet-stream'} if token else {}
+    respuesta = requests.get(url, headers=headers, timeout=60)
+    respuesta.raise_for_status()
+    return respuesta.content
+
+
+def _download_coyuntura(url, token):
+    import requests
     try:
-        respuesta = requests.get(url, headers=headers, timeout=60)
-        respuesta.raise_for_status()
+        return _download_coyuntura_cacheado(url, token)
     except requests.RequestException:
         return None
-    return respuesta.content
 
 
 def load_coyuntura():
@@ -324,6 +332,12 @@ def load_coyuntura():
 
 
 def get_full_database_archive():
+    return _full_database_archive(_database_version())
+
+
+@st.cache_data(max_entries=1)
+def _full_database_archive(database_version):
+    """Zip de la base completa; se arma una vez por versión y no en cada interacción."""
     output = io.BytesIO()
     with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
         archive.write(FILE_PATH, arcname='BD.xlsx')
@@ -335,13 +349,13 @@ def filter_data(df, search_text, institution_filter, hierarchy_filters, topic_fi
     dff = df.copy()
     if search_text:
         mask = (
-            dff['Nombre serie'].astype(str).str.contains(search_text, case=False, na=False) |
-            dff['Detalle'].astype(str).str.contains(search_text, case=False, na=False) |
-            dff['Institución'].astype(str).str.contains(search_text, case=False, na=False) |
-            dff['Área'].astype(str).str.contains(search_text, case=False, na=False) |
-            dff['Subárea 1'].astype(str).str.contains(search_text, case=False, na=False) |
-            dff['Subárea 2'].astype(str).str.contains(search_text, case=False, na=False) |
-            dff['Subárea 3'].astype(str).str.contains(search_text, case=False, na=False)
+            dff['Nombre serie'].astype(str).str.contains(search_text, case=False, na=False, regex=False) |
+            dff['Detalle'].astype(str).str.contains(search_text, case=False, na=False, regex=False) |
+            dff['Institución'].astype(str).str.contains(search_text, case=False, na=False, regex=False) |
+            dff['Área'].astype(str).str.contains(search_text, case=False, na=False, regex=False) |
+            dff['Subárea 1'].astype(str).str.contains(search_text, case=False, na=False, regex=False) |
+            dff['Subárea 2'].astype(str).str.contains(search_text, case=False, na=False, regex=False) |
+            dff['Subárea 3'].astype(str).str.contains(search_text, case=False, na=False, regex=False)
         )
         dff = dff[mask]
     if institution_filter != "Todas":

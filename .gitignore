@@ -9,3 +9,5 @@ bds/IndiceSeries.backup-*.xlsx
 3 Tipo de Cambio Real.xlsx
 .streamlit-run*.log
 reportes/series_visualmente_iguales.csv
+# Hoja «Fuentes y Esquema» del libro de coyuntura: privada, nunca se publica
+coyuntura/coyuntura iiep fuentes y esquema.xlsx
